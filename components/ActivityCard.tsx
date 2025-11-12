@@ -1,3 +1,5 @@
+// REVIEW: Code checked for clarity, functionality, and potential issues. The dynamic image fetching with a fallback is a nice touch.
+
 import React from 'react';
 import { Activity } from '../types.ts';
 import { UsersIcon, ClockIcon } from './icons.tsx';

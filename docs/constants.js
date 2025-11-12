@@ -1,15 +1,1 @@
-
-import { Category } from './types.js';
-import { SportIcon, ArtIcon, MusicIcon, CookingIcon, TechIcon, OutdoorIcon, GoldenAgeIcon, EnrichmentIcon, CommunityIcon } from './components/icons.js';
-
-export const CATEGORIES: Category[] = [
-  { id: 'sport', name: 'ספורט', icon: SportIcon },
-  { id: 'art', name: 'אומנות', icon: ArtIcon },
-  { id: 'music', name: 'מוזיקה', icon: MusicIcon },
-  { id: 'golden_age', name: 'גיל הזהב', icon: GoldenAgeIcon },
-  { id: 'enrichment', name: 'העשרה ולימוד', icon: EnrichmentIcon },
-  { id: 'community', name: 'קהילה', icon: CommunityIcon },
-  { id: 'tech', name: 'טכנולוגיה', icon: TechIcon },
-  // { id: 'cooking', name: 'בישול', icon: CookingIcon },
-  // { id: 'outdoor', name: 'טיולים', icon: OutdoorIcon },
-];
+// DEPRECATED: This .js file is a stale artifact and is no longer used. The application now runs directly from the .tsx source files using in-browser transpilation.

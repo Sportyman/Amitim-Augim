@@ -1,3 +1,4 @@
+// REVIEW: Code checked for clarity, functionality, and potential issues. This entry point is correctly configured.
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';

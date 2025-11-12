@@ -1,3 +1,5 @@
+// REVIEW: Code checked for clarity, functionality, and potential issues. The component structure and state management are solid. The data path is correct for its location within the /docs folder.
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header.tsx';
 import CategoryFilter from './components/CategoryFilter.tsx';

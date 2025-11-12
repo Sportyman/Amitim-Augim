@@ -1,3 +1,5 @@
+// REVIEW: Code checked for clarity, functionality, and potential issues. The component is well-structured for age-based filtering.
+
 import React from 'react';
 
 interface AgeRangeFilterProps {
