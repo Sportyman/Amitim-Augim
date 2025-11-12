@@ -1,0 +1,5 @@
+{
+  "name": "Amitim Activity Finder",
+  "description": "A web application to search and filter classes and activities for 'Amitim' members, inspired by the design of basalon.co.il. It features a modern, accessible interface with smart search capabilities powered by the Gemini API.",
+  "requestFramePermissions": []
+}
