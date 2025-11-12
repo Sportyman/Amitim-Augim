@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { SearchIcon } from './icons.tsx';
+import { SearchIcon } from './icons.js';
 
 interface SearchBarProps {
   searchTerm: string;

@@ -1,6 +1,6 @@
 
-import { Category } from './types.ts';
-import { SportIcon, ArtIcon, MusicIcon, CookingIcon, TechIcon, OutdoorIcon, GoldenAgeIcon, EnrichmentIcon, CommunityIcon } from './components/icons.tsx';
+import { Category } from './types.js';
+import { SportIcon, ArtIcon, MusicIcon, CookingIcon, TechIcon, OutdoorIcon, GoldenAgeIcon, EnrichmentIcon, CommunityIcon } from './components/icons.js';
 
 export const CATEGORIES: Category[] = [
   { id: 'sport', name: 'ספורט', icon: SportIcon },

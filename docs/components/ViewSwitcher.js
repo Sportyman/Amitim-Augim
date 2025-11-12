@@ -1,5 +1,5 @@
 import React from 'react';
-import { GridIcon, ListIcon } from './icons.tsx';
+import { GridIcon, ListIcon } from './icons.js';
 
 type ViewMode = 'grid' | 'list';
 

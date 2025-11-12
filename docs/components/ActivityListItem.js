@@ -1,6 +1,6 @@
 import React from 'react';
-import { Activity } from '../types.ts';
-import { UsersIcon, ClockIcon } from './icons.tsx';
+import { Activity } from '../types.js';
+import { UsersIcon, ClockIcon } from './icons.js';
 
 interface ActivityListItemProps {
   activity: Activity;

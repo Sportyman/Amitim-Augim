@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { scrapeAndStructureData } from '../services/geminiService.ts';
-import { Activity } from '../types.ts';
+import { scrapeAndStructureData } from '../services/geminiService.js';
+import { Activity } from '../types.js';
 
 interface DataImporterProps {
   currentActivities: Activity[];
