@@ -7,11 +7,11 @@ import ActivityListItem from './components/ActivityListItem.tsx';
 import ViewSwitcher from './components/ViewSwitcher.tsx';
 import MultiSelectFilter from './components/MultiSelectFilter.tsx';
 import AgeRangeFilter from './components/AgeRangeFilter.tsx';
-import PriceRangeFilter from './components/PriceRangeFilter.tsx'; // Import new component
+import PriceRangeFilter from './components/PriceRangeFilter.tsx';
 import { CATEGORIES } from './constants.ts';
 import { Activity } from './types.ts';
 import { findRelatedKeywords } from './services/geminiService.ts';
-import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons.tsx'; // Import new icons
+import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons.tsx';
 
 type ViewMode = 'grid' | 'list';
 
@@ -56,7 +56,7 @@ const App: React.FC = () => {
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   useEffect(() => {
-    fetch('./activities.json')
+    fetch('/activities.json')
       .then(response => response.json())
       .then(data => {
         setActivities(data);
@@ -129,9 +129,11 @@ const App: React.FC = () => {
 
       const searchKeywords = [searchTerm.toLowerCase(), ...relatedKeywords.map(k => k.toLowerCase())];
       const termMatch = searchTerm.trim() === '' || searchKeywords.some(keyword => 
-            activity.title.toLowerCase().includes(keyword) ||
-            activity.description.toLowerCase().includes(keyword) ||
-            activity.category.toLowerCase().includes(keyword)
+            keyword && (
+              activity.title.toLowerCase().includes(keyword) ||
+              activity.description.toLowerCase().includes(keyword) ||
+              activity.category.toLowerCase().includes(keyword)
+            )
       );
 
       const [locationName = '', cityName = ''] = activity.location.split(', ').map(s => s.trim());
@@ -289,6 +291,7 @@ const App: React.FC = () => {
           </div>
           {renderContent()}
         </section>
+        
       </main>
       <footer className="bg-white mt-16 py-6">
         <div className="text-center text-gray-500">
