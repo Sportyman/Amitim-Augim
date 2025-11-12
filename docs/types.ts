@@ -1,5 +1,3 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. TypeScript types are well-defined and correct.
-
 import React from 'react';
 
 export interface Category {

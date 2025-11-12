@@ -1,4 +1,3 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. This is a solid, static header component.
 
 import React from 'react';
 

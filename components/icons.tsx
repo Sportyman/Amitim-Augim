@@ -1,5 +1,3 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. All SVG icon components are correctly implemented.
-
 import React from 'react';
 
 export const SportIcon: React.FC<{ className?: string }> = ({ className }) => (

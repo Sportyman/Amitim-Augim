@@ -1,1 +1,21 @@
-// DEPRECATED: This .js file is a stale artifact and is no longer used. The application now runs directly from the .tsx source files using in-browser transpilation.
+import React from 'react';
+
+export interface Category {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+export interface Activity {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+  imageUrl: string;
+  location: string;
+  price: number;
+  ageGroup: string;
+  schedule: string;
+  instructor: string | null;
+  detailsUrl: string;
+}

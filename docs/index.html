@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Amitim Activity Finder</title>
-    <!-- REVIEW: HTML structure reviewed. The configuration with Babel is correct for its location. This file is ready for deployment from the /docs folder. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,7 +13,7 @@
         font-family: 'Assistant', sans-serif;
       }
     </style>
-    <!-- Add Babel for in-browser JSX/TSX transpilation -->
+    <!-- Babel Standalone for live transpilation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script type="importmap">
     {
@@ -29,7 +28,6 @@
   </head>
   <body class="bg-gray-50">
     <div id="root"></div>
-    <!-- Use text/babel to transpile the TSX module on the fly. The path must be relative for GitHub Pages. -->
-    <script type="text/babel" data-type="module" src="./index.js"></script>
+    <script type="text/babel" data-type="module" src="index.js"></script>
   </body>
 </html>

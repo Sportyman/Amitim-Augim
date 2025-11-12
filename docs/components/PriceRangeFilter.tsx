@@ -1,5 +1,3 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. This component is well-structured for price-based filtering.
-
 import React from 'react';
 
 interface PriceRangeFilterProps {

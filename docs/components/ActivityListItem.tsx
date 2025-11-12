@@ -1,8 +1,6 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. This component provides a clean list view for activities.
-
 import React from 'react';
-import { Activity } from '../types.js';
-import { UsersIcon, ClockIcon } from './icons.js';
+import { Activity } from '../types.ts';
+import { UsersIcon, ClockIcon } from './icons.tsx';
 
 interface ActivityListItemProps {
   activity: Activity;

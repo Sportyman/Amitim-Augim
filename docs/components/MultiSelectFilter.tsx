@@ -1,5 +1,3 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. This is a flexible and reusable component for filtering.
-
 import React from 'react';
 
 interface MultiSelectFilterProps {

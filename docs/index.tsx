@@ -1,8 +1,7 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. This entry point is correctly configured.
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.js';
+import App from './App.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

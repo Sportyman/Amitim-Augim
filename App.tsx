@@ -1,19 +1,17 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. The component structure and state management are solid. Corrected the path to fetch activities data to ensure it works from the root directory.
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import Header from './components/Header.js';
-import CategoryFilter from './components/CategoryFilter.js';
-import SearchBar from './components/SearchBar.js';
-import ActivityCard from './components/ActivityCard.js';
-import ActivityListItem from './components/ActivityListItem.js';
-import ViewSwitcher from './components/ViewSwitcher.js';
-import MultiSelectFilter from './components/MultiSelectFilter.js';
-import AgeRangeFilter from './components/AgeRangeFilter.js';
-import PriceRangeFilter from './components/PriceRangeFilter.js'; // Import new component
-import { CATEGORIES } from './constants.js';
-import { Activity } from './types.js';
-import { findRelatedKeywords } from './services/geminiService.js';
-import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons.js'; // Import new icons
+import Header from './components/Header.tsx';
+import CategoryFilter from './components/CategoryFilter.tsx';
+import SearchBar from './components/SearchBar.tsx';
+import ActivityCard from './components/ActivityCard.tsx';
+import ActivityListItem from './components/ActivityListItem.tsx';
+import ViewSwitcher from './components/ViewSwitcher.tsx';
+import MultiSelectFilter from './components/MultiSelectFilter.tsx';
+import AgeRangeFilter from './components/AgeRangeFilter.tsx';
+import PriceRangeFilter from './components/PriceRangeFilter.tsx'; // Import new component
+import { CATEGORIES } from './constants.ts';
+import { Activity } from './types.ts';
+import { findRelatedKeywords } from './services/geminiService.ts';
+import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons.tsx'; // Import new icons
 
 type ViewMode = 'grid' | 'list';
 
@@ -58,8 +56,7 @@ const App: React.FC = () => {
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   useEffect(() => {
-    // FIX: Corrected the fetch path to point to the correct location in the public directory.
-    fetch('./public/activities.json')
+    fetch('./activities.json')
       .then(response => response.json())
       .then(data => {
         setActivities(data);

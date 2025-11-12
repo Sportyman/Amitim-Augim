@@ -1,8 +1,6 @@
-// REVIEW: Code checked for clarity, functionality, and potential issues. This is a powerful admin tool. The error handling and loading states are implemented well.
-
 import React, { useState } from 'react';
-import { scrapeAndStructureData } from '../services/geminiService.js';
-import { Activity } from '../types.js';
+import { scrapeAndStructureData } from '../services/geminiService.ts';
+import { Activity } from '../types.ts';
 
 interface DataImporterProps {
   currentActivities: Activity[];
