@@ -1,7 +1,7 @@
 // REVIEW: Code checked for clarity, functionality, and potential issues. Good use of ARIA labels for accessibility.
 
 import React from 'react';
-import { GridIcon, ListIcon } from './icons.tsx';
+import { GridIcon, ListIcon } from './icons.js';
 
 type ViewMode = 'grid' | 'list';
 

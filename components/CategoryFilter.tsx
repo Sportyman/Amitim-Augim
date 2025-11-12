@@ -1,7 +1,7 @@
 // REVIEW: Code checked for clarity, functionality, and potential issues. The component is well-designed and functional.
 
 import React from 'react';
-import { Category } from '../types.ts';
+import { Category } from '../types.js';
 
 interface CategoryFilterProps {
   categories: Category[];

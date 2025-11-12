@@ -1,7 +1,7 @@
 // REVIEW: Code checked for clarity, functionality, and potential issues. Component effectively handles search input and loading states.
 
 import React from 'react';
-import { SearchIcon } from './icons.tsx';
+import { SearchIcon } from './icons.js';
 
 interface SearchBarProps {
   searchTerm: string;
