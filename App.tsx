@@ -57,7 +57,7 @@ const App: React.FC = () => {
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   
   useEffect(() => {
-    fetch('./public/activities.json')
+    fetch('/activities.json')
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
