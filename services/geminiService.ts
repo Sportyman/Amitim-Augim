@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Aligned API key initialization with guidelines by using process.env.API_KEY directly.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+// Fix: Per coding guidelines, initialize the SDK using process.env.API_KEY. This resolves the TypeScript error.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   if (!term.trim()) {
