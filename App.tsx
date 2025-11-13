@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header.tsx';
 import CategoryFilter from './components/CategoryFilter.tsx';
@@ -54,16 +55,10 @@ const App: React.FC = () => {
   const [ageRange, setAgeRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
-  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   
   useEffect(() => {
-    fetch('./public/activities.json')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
+    fetch('/activities.json')
+      .then(response => response.json())
       .then(data => {
         setActivities(data);
         setIsLoadingActivities(false);
@@ -122,21 +117,9 @@ const App: React.FC = () => {
         return;
     }
     setIsSearching(true);
-    setApiKeyError(null); // Reset error on new search
-    try {
-      const keywords = await findRelatedKeywords(searchTerm);
-      setRelatedKeywords(keywords);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("API_KEY")) {
-          setApiKeyError("שגיאת תצורה: מפתח ה-API של Gemini אינו זמין. תכונות החיפוש החכם מבוססות AI מושבתות.");
-      } else {
-          console.error("An unexpected error occurred during search:", error);
-          setApiKeyError("אירעה שגיאה בלתי צפויה בעת החיפוש.");
-      }
-      setRelatedKeywords([]);
-    } finally {
-      setIsSearching(false);
-    }
+    const keywords = await findRelatedKeywords(searchTerm);
+    setRelatedKeywords(keywords);
+    setIsSearching(false);
   }, [searchTerm]);
 
   const filteredActivities = useMemo(() => {
@@ -256,12 +239,6 @@ const App: React.FC = () => {
                     onSubmit={handleSearch}
                     isLoading={isSearching}
                 />
-                {apiKeyError && (
-                    <div className="text-center max-w-lg mx-auto p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert">
-                        <p className="font-semibold">שגיאה בתכונת החיפוש החכם</p>
-                        <p className="text-sm">{apiKeyError}</p>
-                    </div>
-                )}
                 <div className="text-center">
                     <button 
                         onClick={() => setIsAdvancedSearchOpen(prev => !prev)}
