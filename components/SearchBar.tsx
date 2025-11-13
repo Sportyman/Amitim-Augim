@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { SearchIcon } from './icons.tsx';
 
