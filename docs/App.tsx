@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header.tsx';
 import CategoryFilter from './components/CategoryFilter.tsx';

@@ -1,4 +1,5 @@
 
+
 import { Category } from './types.ts';
 import { SportIcon, ArtIcon, MusicIcon, CookingIcon, TechIcon, OutdoorIcon, GoldenAgeIcon, EnrichmentIcon, CommunityIcon } from './components/icons.tsx';
 
