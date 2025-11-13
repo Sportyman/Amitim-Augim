@@ -1,7 +1,23 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// FIX: Aligned API key initialization with guidelines by using process.env.API_KEY directly.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+let ai: GoogleGenAI | null = null;
+
+// Lazy initialization of the AI client
+function getAiClient(): GoogleGenAI {
+  if (ai) {
+    return ai;
+  }
+  
+  // Check if the API key is available. process.env is shimmed in index.html for browser environments.
+  if (process.env.API_KEY) {
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    return ai;
+  }
+  
+  // If the key is missing, throw an error that can be caught in the UI.
+  throw new Error("API_KEY environment variable not set. AI features are unavailable.");
+}
+
 
 export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   if (!term.trim()) {
@@ -9,10 +25,10 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   }
 
   try {
-    // FIX: Updated prompt to align with the responseSchema, ensuring the model returns a JSON object with a 'keywords' key for more reliable parsing.
+    const aiClient = getAiClient();
     const prompt = `For the search term "${term}" on a Hebrew activity finder website, provide related keywords. For example, for "בריכה", suggest "שחייה", "מים", "קאנטרי". Return a JSON object where the key "keywords" is an array of Hebrew keyword strings.`;
     
-    const response = await ai.models.generateContent({
+    const response = await aiClient.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
@@ -41,12 +57,15 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
     return [];
 
   } catch (error) {
-    console.error("Error fetching related keywords from Gemini API:", error);
+    console.error("Error with Gemini API:", error);
+    // Propagate the specific API key error to be handled in the UI
+    if (error instanceof Error && error.message.includes("API_KEY")) {
+        throw error;
+    }
     return [];
   }
 };
 
-// FIX: Added missing scrapeAndStructureData function to parse HTML and extract activity data.
 export const scrapeAndStructureData = async (html: string): Promise<string> => {
   if (!html.trim()) {
     throw new Error("HTML input is empty.");
@@ -75,7 +94,8 @@ export const scrapeAndStructureData = async (html: string): Promise<string> => {
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const aiClient = getAiClient();
+    const response = await aiClient.models.generateContent({
       model: 'gemini-2.5-pro',
       contents: prompt,
       config: {
@@ -118,6 +138,9 @@ export const scrapeAndStructureData = async (html: string): Promise<string> => {
   } catch (error) {
     console.error("Error scraping data with Gemini API:", error);
     if (error instanceof Error) {
+        if (error.message.includes("API_KEY")) {
+            throw error;
+        }
         throw new Error(`Failed to scrape and structure data: ${error.message}`);
     }
     throw new Error("An unknown error occurred during data scraping.");
