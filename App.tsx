@@ -58,7 +58,7 @@ const App: React.FC = () => {
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   useEffect(() => {
-    fetch('./public/activities.json')
+    fetch('./activities.json')
       .then(response => response.json())
       .then(data => {
         setActivities(data);
