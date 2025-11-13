@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header';
 import CategoryFilter from './components/CategoryFilter';
@@ -57,7 +58,7 @@ const App: React.FC = () => {
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   useEffect(() => {
-    fetch('activities.json')
+    fetch('./public/activities.json')
       .then(response => response.json())
       .then(data => {
         setActivities(data);
