@@ -3,11 +3,11 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // IMPORTANT: Replace 'MY_REPOSITORY_NAME' with the name of your GitHub repository.
-  // This is crucial for GitHub Pages deployment.
-  base: '/MY_REPOSITORY_NAME/',
+  // Set to the repository name for GitHub Pages deployment.
+  base: '/Amitim-Augim/',
   plugins: [react()],
   build: {
+    // Output to 'docs' folder for GitHub Pages.
     outDir: 'docs',
     emptyOutDir: true,
   }
