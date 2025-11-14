@@ -2,14 +2,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleGenAI, Type } from "@google/genai";
 
-// --- TYPES (types.ts) ---
-interface Category {
+// T Y P E S
+export interface Category {
   id: string;
   name: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
-interface Activity {
+export interface Activity {
   id: number;
   title: string;
   category: string;
@@ -24,8 +24,8 @@ interface Activity {
 }
 
 
-// --- ICONS (components/icons.tsx) ---
-const SportIcon: React.FC<{ className?: string }> = ({ className }) => (
+// I C O N S
+export const SportIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
     <path d="m3.5 9 17 6" />
@@ -34,7 +34,7 @@ const SportIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const ArtIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const ArtIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 20h.01" />
     <path d="M11 6.16A5.32 5.32 0 0 1 12 6a5.32 5.32 0 0 1 1-.16" />
@@ -53,7 +53,7 @@ const ArtIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const MusicIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const MusicIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 18V5l12-2v13"/>
         <circle cx="6" cy="18" r="3"/>
@@ -61,7 +61,7 @@ const MusicIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-const GoldenAgeIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const GoldenAgeIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <path d="M12 12 L12 6" />
@@ -70,14 +70,14 @@ const GoldenAgeIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-const EnrichmentIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const EnrichmentIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 19.5 A2.5 2.5 0 0 1 6.5 17 H 20" />
         <path d="M6.5 2 H 20 v 15 H 6.5 A 2.5 2.5 0 0 1 4 14.5 v -10 A 2.5 2.5 0 0 1 6.5 2 Z" />
     </svg>
 );
 
-const CommunityIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const CommunityIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
         <circle cx="8.5" cy="7" r="4" />
@@ -86,7 +86,7 @@ const CommunityIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-const TechIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const TechIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect width="18" height="12" x="3" y="4" rx="2" ry="2"/>
         <line x1="2" x2="22" y1="20" y2="20"/>
@@ -94,14 +94,14 @@ const TechIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"></circle>
     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
   </svg>
 );
 
-const UsersIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const UsersIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
     <circle cx="9" cy="7" r="4" />
@@ -110,14 +110,14 @@ const UsersIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const ClockIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const ClockIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
     <polyline points="12 6 12 12 16 14" />
   </svg>
 );
 
-const GridIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const GridIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7" />
     <rect x="14" y="3" width="7" height="7" />
@@ -126,7 +126,7 @@ const GridIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const ListIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const ListIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="8" y1="6" x2="21" y2="6" />
     <line x1="8" y1="12" x2="21" y2="12" />
@@ -137,7 +137,7 @@ const ListIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const SlidersIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const SlidersIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="4" y1="21" x2="4" y2="14" />
     <line x1="4" y1="10" x2="4" y2="3" />
@@ -151,19 +151,19 @@ const SlidersIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="6 9 12 15 18 9"></polyline>
     </svg>
 );
 
-const ChevronUpIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const ChevronUpIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="18 15 12 9 6 15"></polyline>
     </svg>
 );
 
-const LocationIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const LocationIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
         <circle cx="12" cy="10" r="3"></circle>
@@ -171,8 +171,8 @@ const LocationIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 
-// --- CONSTANTS (constants.ts) ---
-const CATEGORIES: Category[] = [
+// C O N S T A N T S
+export const CATEGORIES: Category[] = [
   { id: 'sport', name: 'ספורט', icon: SportIcon },
   { id: 'art', name: 'אומנות', icon: ArtIcon },
   { id: 'music', name: 'מוזיקה', icon: MusicIcon },
@@ -183,10 +183,10 @@ const CATEGORIES: Category[] = [
 ];
 
 
-// --- SERVICES (services/geminiService.ts) ---
+// S E R V I C E S
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
-const findRelatedKeywords = async (term: string): Promise<string[]> => {
+export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   if (!term.trim()) {
     return [];
   }
@@ -228,7 +228,7 @@ const findRelatedKeywords = async (term: string): Promise<string[]> => {
   }
 };
 
-const scrapeAndStructureData = async (html: string): Promise<string> => {
+export const scrapeAndStructureData = async (html: string): Promise<string> => {
   if (!html.trim()) {
     throw new Error("HTML input is empty.");
   }
@@ -306,7 +306,7 @@ const scrapeAndStructureData = async (html: string): Promise<string> => {
 };
 
 
-// --- COMPONENTS (components/*.tsx) ---
+// C O M P O N E N T S
 
 const Header: React.FC = () => {
   return (
@@ -343,6 +343,7 @@ interface CategoryFilterProps {
   selectedCategories: string[];
   onCategoryToggle: (categoryId: string) => void;
 }
+
 const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCategories, onCategoryToggle }) => {
   return (
     <div className="flex justify-center flex-wrap gap-4 sm:gap-6">
@@ -377,6 +378,7 @@ interface SearchBarProps {
   onSubmit: () => void;
   isLoading: boolean;
 }
+
 const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, onSubmit, isLoading }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -415,6 +417,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, onSub
 interface ActivityCardProps {
   activity: Activity;
 }
+
 const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
   const getKeywords = () => {
     let titleKeywords = activity.title.split('-')[0].trim();
@@ -480,6 +483,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
 interface ActivityListItemProps {
   activity: Activity;
 }
+
 const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity }) => {
   const getKeywords = () => {
     let titleKeywords = activity.title.split('-')[0].trim();
@@ -546,10 +550,12 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity }) => {
 
 
 type ViewMode = 'grid' | 'list';
+
 interface ViewSwitcherProps {
   currentView: ViewMode;
   onViewChange: (view: ViewMode) => void;
 }
+
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }) => {
   const baseClasses = "p-2 rounded-md transition-colors duration-200";
   const activeClasses = "bg-orange-100 text-orange-600";
@@ -577,13 +583,13 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }
   );
 };
 
-
 interface MultiSelectFilterProps {
   title: string;
   options: string[];
   selectedOptions: string[];
   onToggle: (option: string) => void;
 }
+
 const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({ title, options, selectedOptions, onToggle }) => {
   if (options.length <= 1) return null;
 
@@ -612,13 +618,13 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({ title, options, s
   );
 };
 
-
 interface AgeRangeFilterProps {
   minAge: string;
   maxAge: string;
   onMinAgeChange: (value: string) => void;
   onMaxAgeChange: (value: string) => void;
 }
+
 const AgeRangeFilter: React.FC<AgeRangeFilterProps> = ({ minAge, maxAge, onMinAgeChange, onMaxAgeChange }) => {
   return (
     <div>
@@ -661,6 +667,7 @@ interface PriceRangeFilterProps {
   onMinPriceChange: (value: string) => void;
   onMaxPriceChange: (value: string) => void;
 }
+
 const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({ minPrice, maxPrice, onMinPriceChange, onMaxPriceChange }) => {
   return (
     <div>
@@ -700,6 +707,7 @@ const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({ minPrice, maxPrice,
 interface DataImporterProps {
   currentActivities: Activity[];
 }
+
 const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
   const [htmlInput, setHtmlInput] = useState('');
   const [jsonOutput, setJsonOutput] = useState('');
@@ -795,8 +803,33 @@ const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
   );
 };
 
+// M A I N   A P P
+const parseAgeGroupToRange = (ageGroup: string): [number, number] | null => {
+  if (!ageGroup) return null;
+  
+  if (ageGroup.includes('רב גילאי')) {
+    return [0, 999];
+  }
+  
+  const olderMatch = ageGroup.match(/(\d+)\s*ומעלה/);
+  if (olderMatch) {
+    return [parseInt(olderMatch[1], 10), 999];
+  }
+  
+  const rangeMatch = ageGroup.match(/(\d+)-(\d+)/);
+  if (rangeMatch) {
+    return [parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10)];
+  }
 
-// --- MAIN APP COMPONENT (App.tsx) ---
+  const singleNumberMatch = ageGroup.match(/\d+/);
+  if (singleNumberMatch) {
+    const age = parseInt(singleNumberMatch[0], 10);
+    return [age, age];
+  }
+
+  return null;
+};
+
 const App: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
@@ -811,34 +844,8 @@ const App: React.FC = () => {
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
-  const parseAgeGroupToRange = (ageGroup: string): [number, number] | null => {
-    if (!ageGroup) return null;
-    
-    if (ageGroup.includes('רב גילאי')) {
-      return [0, 999];
-    }
-    
-    const olderMatch = ageGroup.match(/(\d+)\s*ומעלה/);
-    if (olderMatch) {
-      return [parseInt(olderMatch[1], 10), 999];
-    }
-    
-    const rangeMatch = ageGroup.match(/(\d+)-(\d+)/);
-    if (rangeMatch) {
-      return [parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10)];
-    }
-
-    const singleNumberMatch = ageGroup.match(/\d+/);
-    if (singleNumberMatch) {
-      const age = parseInt(singleNumberMatch[0], 10);
-      return [age, age];
-    }
-
-    return null;
-  };
-
   useEffect(() => {
-    fetch('./activities.json')
+    fetch('/activities.json')
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');
@@ -1092,11 +1099,11 @@ const App: React.FC = () => {
 };
 
 
-// --- RENDER APP ---
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
+
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
