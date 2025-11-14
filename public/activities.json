@@ -3800,39 +3800,3 @@
     "id": 293,
     "title": "תנועה וספורט-מטאור",
     "category": "ספורט",
-    "description": "מרכז מטאור: 050-9166345",
-    "imageUrl": "https://picsum.photos/seed/293/400/300",
-    "location": "מרכז מטאור, הרצליה",
-    "price": 230,
-    "ageGroup": "ילדים 7-12",
-    "schedule": "פעם בשבוע, יום ה' 16:30 - 17:15",
-    "instructor": null,
-    "detailsUrl": "#"
-  },
-  {
-    "id": 294,
-    "title": "תנועה וספורט-מטאור",
-    "category": "ספורט",
-    "description": "מרכז מטאור: 050-9166345",
-    "imageUrl": "https://picsum.photos/seed/294/400/300",
-    "location": "מרכז מטאור, הרצליה",
-    "price": 260,
-    "ageGroup": "ילדים 7-12",
-    "schedule": "פעם בשבוע, יום ה' 17:15 - 18:15",
-    "instructor": null,
-    "detailsUrl": "#"
-  },
-  {
-    "id": 295,
-    "title": "תנועה וספורט-מטאור",
-    "category": "ספורט",
-    "description": "מרכז מטאור: 050-9166345",
-    "imageUrl": "https://picsum.photos/seed/295/400/300",
-    "location": "מרכז מטאור, הרצליה",
-    "price": 260,
-    "ageGroup": "ילדים 7-12",
-    "schedule": "פעם בשבוע, יום ה' 18:15 - 19:15",
-    "instructor": null,
-    "detailsUrl": "#"
-  }
-]
