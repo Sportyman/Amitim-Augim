@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { scrapeAndStructureData } from '../services/geminiService.ts';
-import { Activity } from '../types.ts';
+import { scrapeAndStructureData } from '../services/geminiService';
+import { Activity } from '../types';
 
 interface DataImporterProps {
   currentActivities: Activity[];
 }
-
-const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
+export const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
   const [htmlInput, setHtmlInput] = useState('');
   const [jsonOutput, setJsonOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -100,5 +99,3 @@ const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
     </section>
   );
 };
-
-export default DataImporter;

@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { SearchIcon } from './icons.tsx';
+import { SearchIcon } from './icons';
 
 interface SearchBarProps {
   searchTerm: string;
@@ -8,8 +7,7 @@ interface SearchBarProps {
   onSubmit: () => void;
   isLoading: boolean;
 }
-
-const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, onSubmit, isLoading }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, onSubmit, isLoading }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       onSubmit();
@@ -43,5 +41,3 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, onSub
     </div>
   );
 };
-
-export default SearchBar;

@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import Header from './components/Header.tsx';
-import CategoryFilter from './components/CategoryFilter.tsx';
-import SearchBar from './components/SearchBar.tsx';
-import ActivityCard from './components/ActivityCard.tsx';
-import ActivityListItem from './components/ActivityListItem.tsx';
-import ViewSwitcher from './components/ViewSwitcher.tsx';
-import MultiSelectFilter from './components/MultiSelectFilter.tsx';
-import AgeRangeFilter from './components/AgeRangeFilter.tsx';
-import PriceRangeFilter from './components/PriceRangeFilter.tsx';
-import DataImporter from './components/DataImporter.tsx';
-import { CATEGORIES } from './constants.ts';
-import { Activity } from './types.ts';
-import { findRelatedKeywords } from './services/geminiService.ts';
-import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons.tsx';
+import { Header } from './components/Header';
+import { CategoryFilter } from './components/CategoryFilter';
+import { SearchBar } from './components/SearchBar';
+import { ActivityCard } from './components/ActivityCard';
+import { ActivityListItem } from './components/ActivityListItem';
+import { ViewSwitcher } from './components/ViewSwitcher';
+import { MultiSelectFilter } from './components/MultiSelectFilter';
+import { AgeRangeFilter } from './components/AgeRangeFilter';
+import { PriceRangeFilter } from './components/PriceRangeFilter';
+import { DataImporter } from './components/DataImporter';
+import { CATEGORIES } from './constants';
+import { Activity } from './types';
+import { findRelatedKeywords } from './services/geminiService';
+import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons';
 
 type ViewMode = 'grid' | 'list';
 
@@ -57,7 +57,7 @@ const App: React.FC = () => {
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   useEffect(() => {
-    fetch('/activities.json')
+    fetch('activities.json')
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');

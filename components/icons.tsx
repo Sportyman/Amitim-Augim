@@ -36,30 +36,6 @@ export const MusicIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-export const CookingIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 21a9 9 0 0 0 9-9h-9v9Z"/>
-        <path d="M3 12a9 9 0 0 1 9-9v9H3Z"/>
-        <path d="M12 12a9 9 0 0 1-9 9v-9h9Z"/>
-        <path d="M21 12a9 9 0 0 0-9 9V12h9Z"/>
-    </svg>
-);
-
-export const TechIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect width="18" height="12" x="3" y="4" rx="2" ry="2"/>
-        <line x1="2" x2="22" y1="20" y2="20"/>
-        <line x1="12" x2="12" y1="16" y2="20"/>
-    </svg>
-);
-
-export const OutdoorIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.59a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-    <path d="M22 12a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
-  </svg>
-);
-
 export const GoldenAgeIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -85,20 +61,18 @@ export const CommunityIcon: React.FC<{ className?: string }> = ({ className }) =
     </svg>
 );
 
+export const TechIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="18" height="12" x="3" y="4" rx="2" ry="2"/>
+        <line x1="2" x2="22" y1="20" y2="20"/>
+        <line x1="12" x2="12" y1="16" y2="20"/>
+    </svg>
+);
 
 export const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"></circle>
     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-  </svg>
-);
-
-export const ShekelIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 12h4a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4" />
-    <path d="M18 6h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4" />
-    <line x1="10" y1="6" x2="10" y2="18" />
-    <line x1="14" y1="6" x2="14" y2="18" />
   </svg>
 );
 
@@ -161,5 +135,12 @@ export const ChevronDownIcon: React.FC<{ className?: string }> = ({ className })
 export const ChevronUpIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+);
+
+export const LocationIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
     </svg>
 );

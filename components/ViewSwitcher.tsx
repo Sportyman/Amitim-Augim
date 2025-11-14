@@ -1,14 +1,12 @@
 import React from 'react';
-import { GridIcon, ListIcon } from './icons.tsx';
+import { GridIcon, ListIcon } from './icons';
 
 type ViewMode = 'grid' | 'list';
-
 interface ViewSwitcherProps {
   currentView: ViewMode;
   onViewChange: (view: ViewMode) => void;
 }
-
-const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }) => {
+export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }) => {
   const baseClasses = "p-2 rounded-md transition-colors duration-200";
   const activeClasses = "bg-orange-100 text-orange-600";
   const inactiveClasses = "text-gray-400 hover:bg-gray-100 hover:text-gray-600";
@@ -34,5 +32,3 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }
     </div>
   );
 };
-
-export default ViewSwitcher;

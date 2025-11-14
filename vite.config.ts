@@ -7,4 +7,8 @@ export default defineConfig({
   // This is crucial for GitHub Pages deployment.
   base: '/MY_REPOSITORY_NAME/',
   plugins: [react()],
+  build: {
+    outDir: 'docs',
+    emptyOutDir: true,
+  }
 })

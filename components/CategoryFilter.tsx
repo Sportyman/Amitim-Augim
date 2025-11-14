@@ -1,14 +1,13 @@
-
 import React from 'react';
-import { Category } from '../types.ts';
+import { Category } from '../types';
+import { SportIcon, ArtIcon, MusicIcon, GoldenAgeIcon, EnrichmentIcon, CommunityIcon, TechIcon } from './icons';
 
 interface CategoryFilterProps {
   categories: Category[];
   selectedCategories: string[];
   onCategoryToggle: (categoryId: string) => void;
 }
-
-const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCategories, onCategoryToggle }) => {
+export const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCategories, onCategoryToggle }) => {
   return (
     <div className="flex justify-center flex-wrap gap-4 sm:gap-6">
       {categories.map((category) => {
@@ -35,5 +34,3 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCat
     </div>
   );
 };
-
-export default CategoryFilter;
