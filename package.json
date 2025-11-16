@@ -10,6 +10,6 @@
   },
   "scripts": {
     "start": "echo \"Start command not needed, this project runs directly in a compatible environment.\"",
-    "build": "echo \"Build command not needed, this project uses ESM and browser-native features.\""
+    "build": "echo \"No build step required; using in-browser transpilation.\""
   }
 }

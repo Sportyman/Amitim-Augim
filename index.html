@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Amitim Activity Finder</title>
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/public/manifest.json" />
     <meta name="theme-color" content="#F97316" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,6 +16,7 @@
         font-family: 'Assistant', sans-serif;
       }
     </style>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script type="importmap">
 {
   "imports": {
@@ -29,6 +30,6 @@
 </head>
   <body class="bg-gray-50">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="text/babel" data-type="module" src="/index.tsx"></script>
   </body>
 </html>
