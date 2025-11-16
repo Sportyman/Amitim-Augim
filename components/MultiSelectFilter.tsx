@@ -6,7 +6,8 @@ interface MultiSelectFilterProps {
   selectedOptions: string[];
   onToggle: (option: string) => void;
 }
-export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({ title, options, selectedOptions, onToggle }) => {
+
+const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({ title, options, selectedOptions, onToggle }) => {
   if (options.length <= 1) return null;
 
   return (
@@ -33,3 +34,5 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({ title, opt
     </div>
   );
 };
+
+export default MultiSelectFilter;

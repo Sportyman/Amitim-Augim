@@ -6,7 +6,8 @@ interface PriceRangeFilterProps {
   onMinPriceChange: (value: string) => void;
   onMaxPriceChange: (value: string) => void;
 }
-export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({ minPrice, maxPrice, onMinPriceChange, onMaxPriceChange }) => {
+
+const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({ minPrice, maxPrice, onMinPriceChange, onMaxPriceChange }) => {
   return (
     <div>
       <h3 className="text-lg font-semibold text-gray-800 mb-3">סינון לפי מחיר (₪)</h3>
@@ -41,3 +42,5 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({ minPrice, ma
     </div>
   );
 };
+
+export default PriceRangeFilter;

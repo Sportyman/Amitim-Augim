@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Header } from './components/Header';
-import { CategoryFilter } from './components/CategoryFilter';
-import { SearchBar } from './components/SearchBar';
-import { ActivityCard } from './components/ActivityCard';
-import { ActivityListItem } from './components/ActivityListItem';
-import { ViewSwitcher } from './components/ViewSwitcher';
-import { MultiSelectFilter } from './components/MultiSelectFilter';
-import { AgeRangeFilter } from './components/AgeRangeFilter';
-import { PriceRangeFilter } from './components/PriceRangeFilter';
-import { DataImporter } from './components/DataImporter';
+import Header from './components/Header';
+import CategoryFilter from './components/CategoryFilter';
+import SearchBar from './components/SearchBar';
+import ActivityCard from './components/ActivityCard';
+import ActivityListItem from './components/ActivityListItem';
+import ViewSwitcher from './components/ViewSwitcher';
+import MultiSelectFilter from './components/MultiSelectFilter';
+import AgeRangeFilter from './components/AgeRangeFilter';
+import PriceRangeFilter from './components/PriceRangeFilter'; // Import new component
 import { CATEGORIES } from './constants';
 import { Activity } from './types';
 import { findRelatedKeywords } from './services/geminiService';
-import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons';
+import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons'; // Import new icons
 
 type ViewMode = 'grid' | 'list';
 
@@ -57,13 +56,8 @@ const App: React.FC = () => {
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   useEffect(() => {
-    fetch('activities.json')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
+    fetch('./activities.json')
+      .then(response => response.json())
       .then(data => {
         setActivities(data);
         setIsLoadingActivities(false);
@@ -295,11 +289,6 @@ const App: React.FC = () => {
           </div>
           {renderContent()}
         </section>
-        
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <DataImporter currentActivities={activities} />
-        </section>
-
       </main>
       <footer className="bg-white mt-16 py-6">
         <div className="text-center text-gray-500">

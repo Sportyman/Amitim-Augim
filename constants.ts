@@ -1,5 +1,6 @@
+
 import { Category } from './types';
-import { SportIcon, ArtIcon, MusicIcon, GoldenAgeIcon, EnrichmentIcon, CommunityIcon, TechIcon } from './components/icons';
+import { SportIcon, ArtIcon, MusicIcon, CookingIcon, TechIcon, OutdoorIcon, GoldenAgeIcon, EnrichmentIcon, CommunityIcon } from './components/icons';
 
 export const CATEGORIES: Category[] = [
   { id: 'sport', name: 'ספורט', icon: SportIcon },
@@ -9,4 +10,6 @@ export const CATEGORIES: Category[] = [
   { id: 'enrichment', name: 'העשרה ולימוד', icon: EnrichmentIcon },
   { id: 'community', name: 'קהילה', icon: CommunityIcon },
   { id: 'tech', name: 'טכנולוגיה', icon: TechIcon },
+  // { id: 'cooking', name: 'בישול', icon: CookingIcon },
+  // { id: 'outdoor', name: 'טיולים', icon: OutdoorIcon },
 ];

@@ -5,7 +5,8 @@ import { Activity } from '../types';
 interface DataImporterProps {
   currentActivities: Activity[];
 }
-export const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
+
+const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
   const [htmlInput, setHtmlInput] = useState('');
   const [jsonOutput, setJsonOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -99,3 +100,5 @@ export const DataImporter: React.FC<DataImporterProps> = ({ currentActivities })
     </section>
   );
 };
+
+export default DataImporter;

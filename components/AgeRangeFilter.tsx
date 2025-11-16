@@ -6,7 +6,8 @@ interface AgeRangeFilterProps {
   onMinAgeChange: (value: string) => void;
   onMaxAgeChange: (value: string) => void;
 }
-export const AgeRangeFilter: React.FC<AgeRangeFilterProps> = ({ minAge, maxAge, onMinAgeChange, onMaxAgeChange }) => {
+
+const AgeRangeFilter: React.FC<AgeRangeFilterProps> = ({ minAge, maxAge, onMinAgeChange, onMaxAgeChange }) => {
   return (
     <div>
       <h3 className="text-lg font-semibold text-gray-800 mb-3">סינון לפי טווח גילאים</h3>
@@ -41,3 +42,5 @@ export const AgeRangeFilter: React.FC<AgeRangeFilterProps> = ({ minAge, maxAge, 
     </div>
   );
 };
+
+export default AgeRangeFilter;

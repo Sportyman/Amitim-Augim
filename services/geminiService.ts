@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+// FIX: Aligned API key initialization with guidelines by using process.env.API_KEY directly.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 export const findRelatedKeywords = async (term: string): Promise<string[]> => {
@@ -8,6 +9,7 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   }
 
   try {
+    // FIX: Updated prompt to align with the responseSchema, ensuring the model returns a JSON object with a 'keywords' key for more reliable parsing.
     const prompt = `For the search term "${term}" on a Hebrew activity finder website, provide related keywords. For example, for "בריכה", suggest "שחייה", "מים", "קאנטרי". Return a JSON object where the key "keywords" is an array of Hebrew keyword strings.`;
     
     const response = await ai.models.generateContent({
@@ -44,6 +46,7 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   }
 };
 
+// FIX: Added missing scrapeAndStructureData function to parse HTML and extract activity data.
 export const scrapeAndStructureData = async (html: string): Promise<string> => {
   if (!html.trim()) {
     throw new Error("HTML input is empty.");
