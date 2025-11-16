@@ -1,6 +1,5 @@
 import React from 'react';
 import { Category } from '../types';
-import { SportIcon, ArtIcon, MusicIcon, GoldenAgeIcon, EnrichmentIcon, CommunityIcon, TechIcon } from './icons';
 
 interface CategoryFilterProps {
   categories: Category[];
