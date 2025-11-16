@@ -1,9 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+// Initialize ai variable, but it might be null if API key is missing.
+let ai: GoogleGenAI | null = null;
+
+if (process.env.API_KEY) {
+  ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+} else {
+  console.warn("API_KEY environment variable is not set. Gemini API features will be disabled.");
+}
 
 export const findRelatedKeywords = async (term: string): Promise<string[]> => {
-  if (!term.trim()) {
+  if (!ai || !term.trim()) {
     return [];
   }
 
@@ -45,8 +52,8 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
 };
 
 export const scrapeAndStructureData = async (html: string): Promise<string> => {
-  if (!html.trim()) {
-    throw new Error("HTML input is empty.");
+  if (!ai || !html.trim()) {
+    throw new Error("HTML input is empty or Gemini client is not initialized.");
   }
 
   const prompt = `
