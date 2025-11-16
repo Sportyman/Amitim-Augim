@@ -18,4 +18,6 @@ export interface Activity {
   schedule: string;
   instructor: string | null;
   detailsUrl: string;
+  ai_summary: string;
+  ai_tags: string[];
 }

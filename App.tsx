@@ -7,11 +7,11 @@ import ActivityListItem from './components/ActivityListItem';
 import ViewSwitcher from './components/ViewSwitcher';
 import MultiSelectFilter from './components/MultiSelectFilter';
 import AgeRangeFilter from './components/AgeRangeFilter';
-import PriceRangeFilter from './components/PriceRangeFilter'; // Import new component
+import PriceRangeFilter from './components/PriceRangeFilter';
 import { CATEGORIES } from './constants';
 import { Activity } from './types';
 import { findRelatedKeywords } from './services/geminiService';
-import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons'; // Import new icons
+import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons';
 
 type ViewMode = 'grid' | 'list';
 
@@ -66,6 +66,18 @@ const App: React.FC = () => {
         console.error("Error fetching activities:", error);
         setIsLoadingActivities(false);
       });
+  }, []);
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').then(registration => {
+          console.log('SW registered: ', registration);
+        }).catch(registrationError => {
+          console.log('SW registration failed: ', registrationError);
+        });
+      });
+    }
   }, []);
 
   const uniqueCities = useMemo(() => {
@@ -131,7 +143,9 @@ const App: React.FC = () => {
       const termMatch = searchTerm.trim() === '' || searchKeywords.some(keyword => 
             activity.title.toLowerCase().includes(keyword) ||
             activity.description.toLowerCase().includes(keyword) ||
-            activity.category.toLowerCase().includes(keyword)
+            activity.category.toLowerCase().includes(keyword) ||
+            (activity.ai_summary && activity.ai_summary.toLowerCase().includes(keyword)) ||
+            (activity.ai_tags && activity.ai_tags.some(tag => tag.toLowerCase().includes(keyword)))
       );
 
       const [locationName = '', cityName = ''] = activity.location.split(', ').map(s => s.trim());
