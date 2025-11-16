@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header';
 import CategoryFilter from './components/CategoryFilter';
@@ -56,7 +57,7 @@ const App: React.FC = () => {
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   useEffect(() => {
-    fetch('/public/activities.json')
+    fetch('/activities.json')
       .then(response => response.json())
       .then(data => {
         setActivities(data);
@@ -71,7 +72,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/public/service-worker.js').then(registration => {
+        navigator.serviceWorker.register('/service-worker.js').then(registration => {
           console.log('SW registered: ', registration);
         }).catch(registrationError => {
           console.log('SW registration failed: ', registrationError);
