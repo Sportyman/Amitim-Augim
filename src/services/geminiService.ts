@@ -1,13 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Initialize ai variable, but it might be null if API key is missing.
 let ai: GoogleGenAI | null = null;
 
-if (process.env.API_KEY) {
-  ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-} else {
-  console.warn("API_KEY environment variable is not set. Gemini API features will be disabled.");
+try {
+  if (process.env.API_KEY) {
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  } else {
+    console.warn("API_KEY environment variable is not set. Gemini API features will be disabled.");
+  }
+} catch (error) {
+    console.error("Error initializing GoogleGenAI:", error);
 }
+
 
 export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   if (!ai || !term.trim()) {
@@ -36,7 +40,7 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
       }
     });
 
-    const jsonString = response.text.trim();
+    const jsonString = response.text?.trim() ?? '';
     if(jsonString) {
         const result = JSON.parse(jsonString);
         if (result && Array.isArray(result.keywords)) {
@@ -107,7 +111,7 @@ export const scrapeAndStructureData = async (html: string): Promise<string> => {
       }
     });
 
-    const jsonString = response.text.trim();
+    const jsonString = response.text?.trim() ?? '';
     if (jsonString) {
       try {
         JSON.parse(jsonString);
