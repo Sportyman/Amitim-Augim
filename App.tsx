@@ -249,9 +249,9 @@ const App: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
+    <div className="min-h-screen bg-gray-50 text-gray-800 font-sans flex flex-col">
       <Header />
-      <main>
+      <main className="flex-grow">
         <div className="bg-gradient-to-br from-orange-50 to-rose-50 pb-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
             <section className="text-center mb-10">
@@ -334,7 +334,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-gray-200 mt-auto py-8">
         <div className="container mx-auto px-4 text-center">
             <p className="text-gray-500 text-sm">
-                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות.
+                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.0.7
             </p>
         </div>
       </footer>
