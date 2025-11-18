@@ -1,3 +1,11 @@
 {
-  "framework": null
+  "framework": null,
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/service-worker.js", "destination": "/public/service-worker.js" },
+    { "source": "/manifest.json", "destination": "/public/manifest.json" },
+    { "source": "/activities.json", "destination": "/public/activities.json" },
+    { "source": "/icon-(.*)", "destination": "/public/icon-$1" },
+    { "source": "/((?!.*\\..*).*)", "destination": "/index.html" }
+  ]
 }
