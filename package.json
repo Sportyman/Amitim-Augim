@@ -1,6 +1,6 @@
 {
   "name": "amitim-activity-finder-pwa",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "private": true,
   "description": "A PWA to search and filter classes and activities for 'Amitim' members.",
   "scripts": {},

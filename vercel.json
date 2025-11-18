@@ -5,7 +5,7 @@
     {
       "source": "/(.*)\\.(tsx|ts)",
       "headers": [
-        { "key": "Content-Type", "value": "text/plain" }
+        { "key": "Content-Type", "value": "application/javascript" }
       ]
     }
   ],
