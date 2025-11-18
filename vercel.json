@@ -1,6 +1,5 @@
 {
   "framework": null,
-  "cleanUrls": false,
   "trailingSlash": false,
   "headers": [
     {
@@ -16,7 +15,7 @@
     { "source": "/activities.json", "destination": "/public/activities.json" },
     { "source": "/icon-(.*)", "destination": "/public/icon-$1" },
     {
-      "source": "/((?!.*\\.(tsx|ts|js|html|css|json|png|jpg|jpeg|svg|ico)$).*)",
+      "source": "/:path((?!.*\\.).*)",
       "destination": "/index.html"
     }
   ]
