@@ -122,6 +122,16 @@ const App: React.FC = () => {
     );
   };
 
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedCategories([]);
+    setAgeRange({ min: '', max: '' });
+    setPriceRange({ min: '', max: '' });
+    setSelectedCities([]);
+    setSelectedLocations([]);
+    setRelatedKeywords([]);
+  };
+
   const handleSearch = useCallback(async () => {
     if(!searchTerm) {
         setRelatedKeywords([]);
@@ -186,21 +196,34 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (isLoadingActivities) {
         return (
-            <div className="text-center py-16">
-                 <svg className="animate-spin h-8 w-8 text-orange-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div className="flex flex-col items-center justify-center py-20">
+                 <svg className="animate-spin h-10 w-10 text-orange-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p className="mt-4 text-gray-500">טוען פעילויות...</p>
+                <p className="text-gray-500 text-lg">טוען פעילויות...</p>
             </div>
         );
     }
 
     if (filteredActivities.length === 0) {
         return (
-            <div className="text-center py-16">
-                <h2 className="text-2xl font-semibold text-gray-700">לא נמצאו תוצאות</h2>
-                <p className="mt-2 text-gray-500">נסו לשנות את בחירת הקטגוריות או את מונח החיפוש.</p>
+            <div className="text-center py-16 bg-white rounded-lg shadow-sm border border-gray-100 mx-4">
+                <div className="mb-4">
+                    <svg className="w-16 h-16 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">לא נמצאו תוצאות</h2>
+                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                    לא מצאנו פעילויות התואמות את החיפוש שלך. נסה לשנות את מילות החיפוש או להסיר חלק מהסינונים.
+                </p>
+                <button 
+                    onClick={resetFilters}
+                    className="px-6 py-2 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors font-medium shadow-sm hover:shadow-md"
+                >
+                    נקה את כל הסינונים
+                </button>
             </div>
         );
     }
@@ -226,13 +249,13 @@ const App: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800">
+    <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
       <Header />
       <main>
-        <div className="bg-gradient-to-br from-orange-50 to-rose-50">
+        <div className="bg-gradient-to-br from-orange-50 to-rose-50 pb-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-            <section className="text-center mb-12">
-              <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
+            <section className="text-center mb-10">
+              <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
                 אז מה בא לך?
               </h1>
               <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
@@ -240,7 +263,7 @@ const App: React.FC = () => {
               </p>
             </section>
 
-            <section className="mb-12 space-y-8">
+            <section className="space-y-8 max-w-5xl mx-auto">
                 <CategoryFilter
                     categories={CATEGORIES}
                     selectedCategories={selectedCategories}
@@ -255,7 +278,7 @@ const App: React.FC = () => {
                 <div className="text-center">
                     <button 
                         onClick={() => setIsAdvancedSearchOpen(prev => !prev)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+                        className={`inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${isAdvancedSearchOpen ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50'}`}
                     >
                         <SlidersIcon className="w-4 h-4" />
                         סינון מתקדם
@@ -263,50 +286,56 @@ const App: React.FC = () => {
                     </button>
                 </div>
                 <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isAdvancedSearchOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="bg-white p-6 rounded-lg shadow-sm mt-4 space-y-6">
-                        <AgeRangeFilter 
-                            minAge={ageRange.min}
-                            maxAge={ageRange.max}
-                            onMinAgeChange={handleMinAgeChange}
-                            onMaxAgeChange={handleMaxAgeChange}
-                        />
-                         <PriceRangeFilter 
-                            minPrice={priceRange.min}
-                            maxPrice={priceRange.max}
-                            onMinPriceChange={handleMinPriceChange}
-                            onMaxPriceChange={handleMaxPriceChange}
-                        />
-                        <MultiSelectFilter 
-                            title="סינון לפי עיר"
-                            options={uniqueCities}
-                            selectedOptions={selectedCities}
-                            onToggle={handleCityToggle}
-                        />
-                        <MultiSelectFilter 
-                            title="סינון לפי מרכז קהילתי"
-                            options={uniqueLocations}
-                            selectedOptions={selectedLocations}
-                            onToggle={handleLocationToggle}
-                        />
+                    <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-100 mt-2 space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <AgeRangeFilter 
+                                minAge={ageRange.min}
+                                maxAge={ageRange.max}
+                                onMinAgeChange={handleMinAgeChange}
+                                onMaxAgeChange={handleMaxAgeChange}
+                            />
+                             <PriceRangeFilter 
+                                minPrice={priceRange.min}
+                                maxPrice={priceRange.max}
+                                onMinPriceChange={handleMinPriceChange}
+                                onMaxPriceChange={handleMaxPriceChange}
+                            />
+                        </div>
+                        <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <MultiSelectFilter 
+                                title="סינון לפי עיר"
+                                options={uniqueCities}
+                                selectedOptions={selectedCities}
+                                onToggle={handleCityToggle}
+                            />
+                            <MultiSelectFilter 
+                                title="סינון לפי מרכז קהילתי"
+                                options={uniqueLocations}
+                                selectedOptions={selectedLocations}
+                                onToggle={handleLocationToggle}
+                            />
+                        </div>
                     </div>
                 </div>
             </section>
           </div>
         </div>
 
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
           <div className="flex justify-between items-center mb-6">
             <p className="text-gray-600">
-              נמצאו <span className="font-bold text-orange-500">{filteredActivities.length}</span> תוצאות
+              נמצאו <span className="font-bold text-orange-600 text-lg">{filteredActivities.length}</span> תוצאות
             </p>
             <ViewSwitcher currentView={viewMode} onViewChange={setViewMode} />
           </div>
           {renderContent()}
         </section>
       </main>
-      <footer className="bg-white mt-16 py-6">
-        <div className="text-center text-gray-500">
-            &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות.
+      <footer className="bg-white border-t border-gray-200 mt-auto py-8">
+        <div className="container mx-auto px-4 text-center">
+            <p className="text-gray-500 text-sm">
+                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות.
+            </p>
         </div>
       </footer>
     </div>
