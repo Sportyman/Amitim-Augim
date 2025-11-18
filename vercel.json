@@ -3,9 +3,15 @@
   "trailingSlash": false,
   "headers": [
     {
-      "source": "/(.*)\\.(tsx|ts)",
+      "source": "/(.*)\\.tsx",
       "headers": [
-        { "key": "Content-Type", "value": "application/javascript" }
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.ts",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" }
       ]
     }
   ],
@@ -14,9 +20,6 @@
     { "source": "/manifest.json", "destination": "/public/manifest.json" },
     { "source": "/activities.json", "destination": "/public/activities.json" },
     { "source": "/icon-(.*)", "destination": "/public/icon-$1" },
-    {
-      "source": "/:path((?!.*\\.).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/((?!.*\\.).*)", "destination": "/index.html" }
   ]
 }
