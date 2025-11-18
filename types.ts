@@ -21,3 +21,5 @@ export interface Activity {
   ai_summary: string;
   ai_tags: string[];
 }
+
+export type ViewMode = 'grid' | 'list';

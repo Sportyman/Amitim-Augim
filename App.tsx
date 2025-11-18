@@ -9,11 +9,9 @@ import MultiSelectFilter from './components/MultiSelectFilter.tsx';
 import AgeRangeFilter from './components/AgeRangeFilter.tsx';
 import PriceRangeFilter from './components/PriceRangeFilter.tsx';
 import { CATEGORIES } from './constants.ts';
-import { Activity } from './types.ts';
+import { Activity, ViewMode } from './types.ts';
 import { findRelatedKeywords } from './services/geminiService.ts';
 import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons.tsx';
-
-type ViewMode = 'grid' | 'list';
 
 const parseAgeGroupToRange = (ageGroup: string): [number, number] | null => {
   if (!ageGroup) return null;

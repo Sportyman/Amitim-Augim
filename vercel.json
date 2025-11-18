@@ -21,7 +21,9 @@
     { "source": "/service-worker.js", "destination": "/public/service-worker.js" },
     { "source": "/manifest.json", "destination": "/public/manifest.json" },
     { "source": "/activities.json", "destination": "/public/activities.json" },
-    { "source": "/icon-(.*)", "destination": "/public/icon-$1" },
+    { "source": "/icon-192.png", "destination": "/public/icon-192.png" },
+    { "source": "/icon-512.png", "destination": "/public/icon-512.png" },
+    { "source": "/favicon.ico", "destination": "/public/favicon.ico" },
     { "source": "/((?!.*\\.).*)", "destination": "/index.html" }
   ]
 }

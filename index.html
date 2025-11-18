@@ -30,6 +30,7 @@
   <body class="bg-gray-50">
     <div id="root"></div>
     <!-- Using absolute path /index.tsx ensures it resolves correctly from root -->
-    <script type="text/babel" data-type="module" src="/index.tsx"></script>
+    <!-- Added data-presets to explicitly tell Babel how to parse TSX files -->
+    <script type="text/babel" data-type="module" data-presets="env,react,typescript" src="/index.tsx"></script>
   </body>
 </html>
