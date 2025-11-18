@@ -1,15 +1,12 @@
 {
   "name": "amitim-activity-finder-pwa",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "A PWA to search and filter classes and activities for 'Amitim' members.",
-  "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "@google/genai": "^1.29.0"
-  },
   "scripts": {
-    "start": "echo \"Start command not needed, this project runs directly in a compatible environment.\"",
-    "build": "echo \"No build step required; using in-browser transpilation.\""
-  }
+    "build": "echo 'No build step required'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

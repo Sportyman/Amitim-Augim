@@ -1,11 +1,20 @@
 {
   "framework": null,
   "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/(.*)\\.tsx?",
+      "headers": [
+        { "key": "Content-Type", "value": "text/plain" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/service-worker.js", "destination": "/public/service-worker.js" },
     { "source": "/manifest.json", "destination": "/public/manifest.json" },
     { "source": "/activities.json", "destination": "/public/activities.json" },
     { "source": "/icon-(.*)", "destination": "/public/icon-$1" },
-    { "source": "/((?!.*\\..*).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
