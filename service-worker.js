@@ -24,7 +24,7 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
 
-        // Clone the request because it's a stream and can only be consumed once.
+        // Clone the request because it's a stream and can only be consumed once
         const fetchRequest = event.request.clone();
 
         return fetch(fetchRequest).then(
