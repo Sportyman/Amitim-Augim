@@ -1,10 +1,10 @@
 {
   "name": "amitim-activity-finder-pwa",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "A PWA to search and filter classes and activities for 'Amitim' members.",
   "scripts": {
-    "build": "echo 'No build step required'"
+    "build": "mkdir -p dist && cp *.html dist/ 2>/dev/null || : && cp *.tsx dist/ 2>/dev/null || : && cp *.ts dist/ 2>/dev/null || : && cp -r components dist/ 2>/dev/null || : && cp -r services dist/ 2>/dev/null || : && cp -r public/* dist/ 2>/dev/null || :"
   },
   "keywords": [],
   "author": "",

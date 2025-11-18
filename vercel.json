@@ -1,10 +1,10 @@
 {
   "framework": null,
-  "cleanUrls": true,
+  "cleanUrls": false,
   "trailingSlash": false,
   "headers": [
     {
-      "source": "/(.*)\\.tsx?",
+      "source": "/(.*)\\.(tsx|ts)",
       "headers": [
         { "key": "Content-Type", "value": "text/plain" }
       ]
@@ -15,6 +15,9 @@
     { "source": "/manifest.json", "destination": "/public/manifest.json" },
     { "source": "/activities.json", "destination": "/public/activities.json" },
     { "source": "/icon-(.*)", "destination": "/public/icon-$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!.*\\.(tsx|ts|js|html|css|json|png|jpg|jpeg|svg|ico)$).*)",
+      "destination": "/index.html"
+    }
   ]
 }
