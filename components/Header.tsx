@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom'; // Import Link
 
 const Header: React.FC = () => {
   const [imageError, setImageError] = useState(false);
@@ -7,9 +7,16 @@ const Header: React.FC = () => {
   return (
     <header className="bg-white shadow-sm sticky top-0 z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-center h-20">
+        <div className="flex items-center justify-between h-20"> 
+          {/* Empty div to balance flex layout if needed, or put login link here */}
+          <div className="w-12">
+             <Link to="/login" className="text-xs text-gray-300 hover:text-gray-500 transition-colors">
+                ניהול
+             </Link>
+          </div>
+
           <div className="flex-shrink-0">
-            <a href="/" className="flex items-center justify-center">
+            <Link to="/" className="flex items-center justify-center">
               {!imageError ? (
                 <img 
                   src="/logo.png" 
@@ -22,8 +29,11 @@ const Header: React.FC = () => {
                   עמיתים
                 </span>
               )}
-            </a>
+            </Link>
           </div>
+          
+           {/* Spacer to keep logo centered */}
+           <div className="w-12"></div>
         </div>
       </div>
     </header>

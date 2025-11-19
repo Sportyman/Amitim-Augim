@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Activity } from '../types';
 import { UsersIcon, ClockIcon } from './icons';
@@ -21,8 +20,10 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
     return `${titleKeywords},${activity.category}`;
   };
   
-  const unsplashUrl = `https://source.unsplash.com/400x300/?${encodeURIComponent(getKeywords())}`;
-  const fallbackUrl = `https://picsum.photos/seed/${activity.id}/400/300`;
+  const imageUrl = activity.imageUrl && activity.imageUrl.length > 10 ? activity.imageUrl : `https://source.unsplash.com/400x300/?${encodeURIComponent(getKeywords())}`;
+  
+  const seedId = typeof activity.id === 'string' ? activity.id.charCodeAt(0) : activity.id;
+  const fallbackUrl = `https://picsum.photos/seed/${seedId}/400/300`;
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     if (e.currentTarget.src !== fallbackUrl) {
@@ -36,7 +37,7 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 flex flex-col sm:flex-row hover:shadow-lg">
       <img 
         className="w-full h-40 sm:w-48 sm:h-auto object-cover cursor-pointer" 
-        src={unsplashUrl} 
+        src={imageUrl} 
         onError={handleImageError}
         alt={activity.title}
         onClick={onShowDetails}

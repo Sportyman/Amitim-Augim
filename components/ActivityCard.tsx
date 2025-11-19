@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Activity } from '../types';
 import { UsersIcon, ClockIcon } from './icons';
@@ -21,8 +20,13 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
     return `${titleKeywords},${activity.category}`;
   };
 
-  const unsplashUrl = `https://source.unsplash.com/400x300/?${encodeURIComponent(getKeywords())}`;
-  const fallbackUrl = `https://picsum.photos/seed/${activity.id}/400/300`;
+  // Prefer user-provided imageUrl, fallback to unsplash, then seed fallback
+  // Note: activity.imageUrl from DB form could be empty
+  const imageUrl = activity.imageUrl && activity.imageUrl.length > 10 ? activity.imageUrl : `https://source.unsplash.com/400x300/?${encodeURIComponent(getKeywords())}`;
+  
+  // Use ID for seed, if string make it a number-like or hash
+  const seedId = typeof activity.id === 'string' ? activity.id.charCodeAt(0) : activity.id;
+  const fallbackUrl = `https://picsum.photos/seed/${seedId}/400/300`;
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     if (e.currentTarget.src !== fallbackUrl) {
@@ -36,7 +40,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
     <div className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 flex flex-col">
       <img 
         className="w-full h-32 object-cover cursor-pointer" 
-        src={unsplashUrl} 
+        src={imageUrl} 
         onError={handleImageError}
         alt={activity.title} 
         onClick={onShowDetails}

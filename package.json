@@ -1,7 +1,6 @@
-
 {
   "name": "amitim-activity-finder",
-  "version": "1.0.12",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,8 +10,11 @@
   },
   "dependencies": {
     "@google/genai": "*",
+    "firebase": "^10.8.0",
+    "lucide-react": "^0.344.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.22.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

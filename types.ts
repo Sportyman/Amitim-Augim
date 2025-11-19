@@ -7,7 +7,7 @@ export interface Category {
 }
 
 export interface Activity {
-  id: number;
+  id: string | number; // Allow both for migration compatibility
   title: string;
   category: string;
   description: string;
@@ -18,8 +18,9 @@ export interface Activity {
   schedule: string;
   instructor: string | null;
   detailsUrl: string;
-  ai_summary: string;
-  ai_tags: string[];
+  ai_summary?: string;
+  ai_tags?: string[];
+  createdAt?: any; // For DB sorting
 }
 
 export type ViewMode = 'grid' | 'list';
