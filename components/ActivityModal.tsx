@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Activity } from '../types';
+import { CENTER_ADDRESSES } from '../constants';
 
 // Icons
 const CloseIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -39,6 +40,12 @@ const UsersIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const NavigationIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="3 11 22 2 13 21 11 13 3 11" />
+    </svg>
+);
+
 interface ActivityModalProps {
   activity: Activity;
   onClose: () => void;
@@ -70,6 +77,13 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
         e.currentTarget.src = fallbackUrl;
     }
   };
+
+  // Resolve exact address
+  const centerName = activity.location.split(',')[0].trim();
+  const specificAddress = CENTER_ADDRESSES[centerName];
+  const navigationQuery = specificAddress ? `${specificAddress}` : activity.location;
+  const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(navigationQuery)}&navigate=yes`;
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navigationQuery)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 z-[100]">
@@ -111,9 +125,23 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
             
             {/* Key Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm">
-                <div className="flex items-center text-gray-700">
-                   <MapPinIcon className="w-5 h-5 ml-3 text-orange-500" />
-                   <span className="font-medium">{activity.location}</span>
+                <div className="flex items-start text-gray-700 col-span-1 sm:col-span-2">
+                   <MapPinIcon className="w-5 h-5 ml-3 text-orange-500 flex-shrink-0 mt-0.5" />
+                   <div>
+                       <span className="font-bold block">{activity.location}</span>
+                       {specificAddress && <span className="text-gray-500 text-xs block mt-1">{specificAddress}</span>}
+                       
+                       <div className="flex gap-3 mt-2">
+                            <a href={wazeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md transition-colors">
+                                <NavigationIcon className="w-3 h-3 ml-1" />
+                                Waze
+                            </a>
+                             <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-green-600 hover:text-green-800 text-xs font-bold bg-green-50 px-2 py-1 rounded-md transition-colors">
+                                <MapPinIcon className="w-3 h-3 ml-1" />
+                                מפות
+                            </a>
+                       </div>
+                   </div>
                 </div>
                 <div className="flex items-center text-gray-700">
                    <UsersIcon className="w-5 h-5 ml-3 text-orange-500" />

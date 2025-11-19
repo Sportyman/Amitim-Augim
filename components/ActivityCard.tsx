@@ -30,6 +30,8 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
     }
   };
   
+  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`;
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 flex flex-col">
       <img 
@@ -54,9 +56,17 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
         </h3>
         
         <div className="mt-2 space-y-1 text-xs text-gray-600">
-            <div className="flex items-center">
-                <LocationIcon className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
-                <span className="truncate">{activity.location}</span>
+            <div className="flex items-center text-gray-600 hover:text-blue-600 transition-colors group">
+                <LocationIcon className="w-4 h-4 ml-2 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                <a 
+                    href={mapUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="truncate hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {activity.location}
+                </a>
             </div>
             <div className="flex items-center">
                 <UsersIcon className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />

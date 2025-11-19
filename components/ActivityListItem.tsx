@@ -30,6 +30,8 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
     }
   };
 
+  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`;
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 flex flex-col sm:flex-row hover:shadow-lg">
       <img 
@@ -55,9 +57,17 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
             <span className="text-xs text-orange-500 font-semibold bg-orange-100 px-2 py-1 rounded-full">{activity.category}</span>
 
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
-                <div className="flex items-center">
-                    <LocationIcon className="w-4 h-4 ml-2 text-gray-400" />
-                    <span>{activity.location}</span>
+                <div className="flex items-center hover:text-blue-600 transition-colors group">
+                    <LocationIcon className="w-4 h-4 ml-2 text-gray-400 group-hover:text-blue-500" />
+                    <a 
+                        href={mapUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {activity.location}
+                    </a>
                 </div>
                 <div className="flex items-center">
                     <UsersIcon className="w-4 h-4 ml-2 text-gray-400" />
