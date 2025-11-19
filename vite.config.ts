@@ -10,7 +10,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       // Define process.env.API_KEY so it can be used in the client-side code
-      'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      // Prioritize the system environment variable (Vercel) over the .env file
+      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY),
     },
   }
 })

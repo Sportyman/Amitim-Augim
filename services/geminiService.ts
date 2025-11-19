@@ -1,11 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// FIX: Aligned API key initialization with guidelines by using process.env.API_KEY directly.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+// FIX: Safely initialize API key to avoid immediate crash if environment variable is missing during initial load.
+const apiKey = process.env.API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   if (!term.trim()) {
     return [];
+  }
+
+  if (!ai) {
+      console.warn("Gemini API key is missing. Skipping keyword generation.");
+      return [];
   }
 
   try {
@@ -50,6 +56,10 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
 export const scrapeAndStructureData = async (html: string): Promise<string> => {
   if (!html.trim()) {
     throw new Error("HTML input is empty.");
+  }
+  
+  if (!ai) {
+      throw new Error("Gemini API key is missing. Cannot process data.");
   }
 
   const prompt = `

@@ -1,6 +1,6 @@
 import React from 'react';
-import { GridIcon, ListIcon } from './icons.tsx';
-import { ViewMode } from '../types.ts';
+import { GridIcon, ListIcon } from './icons';
+import { ViewMode } from '../types';
 
 interface ViewSwitcherProps {
   currentView: ViewMode;

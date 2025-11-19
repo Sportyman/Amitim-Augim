@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import Header from './components/Header.tsx';
-import CategoryFilter from './components/CategoryFilter.tsx';
-import SearchBar from './components/SearchBar.tsx';
-import ActivityCard from './components/ActivityCard.tsx';
-import ActivityListItem from './components/ActivityListItem.tsx';
-import ViewSwitcher from './components/ViewSwitcher.tsx';
-import MultiSelectFilter from './components/MultiSelectFilter.tsx';
-import AgeRangeFilter from './components/AgeRangeFilter.tsx';
-import PriceRangeFilter from './components/PriceRangeFilter.tsx';
-import { CATEGORIES } from './constants.ts';
-import { Activity, ViewMode } from './types.ts';
-import { findRelatedKeywords } from './services/geminiService.ts';
-import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons.tsx';
+import Header from './components/Header';
+import CategoryFilter from './components/CategoryFilter';
+import SearchBar from './components/SearchBar';
+import ActivityCard from './components/ActivityCard';
+import ActivityListItem from './components/ActivityListItem';
+import ViewSwitcher from './components/ViewSwitcher';
+import MultiSelectFilter from './components/MultiSelectFilter';
+import AgeRangeFilter from './components/AgeRangeFilter';
+import PriceRangeFilter from './components/PriceRangeFilter';
+import { CATEGORIES } from './constants';
+import { Activity, ViewMode } from './types';
+import { findRelatedKeywords } from './services/geminiService';
+import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons';
 
 const parseAgeGroupToRange = (ageGroup: string): [number, number] | null => {
   if (!ageGroup) return null;
@@ -332,7 +332,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-gray-200 mt-auto py-8">
         <div className="container mx-auto px-4 text-center">
             <p className="text-gray-500 text-sm">
-                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.0.7
+                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.0.10
             </p>
         </div>
       </footer>
