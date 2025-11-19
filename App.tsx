@@ -9,6 +9,7 @@ import ViewSwitcher from './components/ViewSwitcher';
 import MultiSelectFilter from './components/MultiSelectFilter';
 import AgeRangeFilter from './components/AgeRangeFilter';
 import PriceRangeFilter from './components/PriceRangeFilter';
+import ActivityModal from './components/ActivityModal';
 import { CATEGORIES } from './constants';
 import { Activity, ViewMode } from './types';
 import { findRelatedKeywords } from './services/geminiService';
@@ -59,6 +60,7 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   
   // Changed from range object to single string logic
   const [userAge, setUserAge] = useState<string>('');
@@ -239,7 +241,11 @@ const App: React.FC = () => {
       return (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {filteredActivities.map((activity) => (
-                  <ActivityCard key={activity.id} activity={activity} />
+                  <ActivityCard 
+                    key={activity.id} 
+                    activity={activity} 
+                    onShowDetails={() => setSelectedActivity(activity)}
+                  />
               ))}
           </div>
       );
@@ -248,7 +254,11 @@ const App: React.FC = () => {
     return (
       <div className="space-y-4">
         {filteredActivities.map((activity) => (
-          <ActivityListItem key={activity.id} activity={activity} />
+          <ActivityListItem 
+            key={activity.id} 
+            activity={activity} 
+            onShowDetails={() => setSelectedActivity(activity)}
+          />
         ))}
       </div>
     );
@@ -340,10 +350,18 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-gray-200 mt-auto py-8">
         <div className="container mx-auto px-4 text-center">
             <p className="text-gray-500 text-sm">
-                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.0.12
+                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.0.13
             </p>
         </div>
       </footer>
+
+      {/* Activity Modal */}
+      {selectedActivity && (
+        <ActivityModal 
+            activity={selectedActivity} 
+            onClose={() => setSelectedActivity(null)} 
+        />
+      )}
     </div>
   );
 };

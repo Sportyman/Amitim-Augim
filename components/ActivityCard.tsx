@@ -1,19 +1,21 @@
+
 import React from 'react';
 import { Activity } from '../types';
 import { UsersIcon, ClockIcon } from './icons';
 
 interface ActivityCardProps {
   activity: Activity;
+  onShowDetails: () => void;
 }
 
 const LocationIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
         <circle cx="12" cy="10" r="3"></circle>
     </svg>
 );
 
-const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
+const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) => {
   const getKeywords = () => {
     let titleKeywords = activity.title.split('-')[0].trim();
     return `${titleKeywords},${activity.category}`;
@@ -31,10 +33,11 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 flex flex-col">
       <img 
-        className="w-full h-32 object-cover" 
+        className="w-full h-32 object-cover cursor-pointer" 
         src={unsplashUrl} 
         onError={handleImageError}
         alt={activity.title} 
+        onClick={onShowDetails}
       />
       <div className="p-3 flex flex-col flex-grow">
         <div className="flex justify-between items-start">
@@ -43,7 +46,12 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
                 <span>{activity.price} ₪</span>
             </div>
         </div>
-        <h3 className="mt-1 text-base font-bold text-gray-800 flex-grow">{activity.title}</h3>
+        <h3 
+            className="mt-1 text-base font-bold text-gray-800 flex-grow cursor-pointer hover:text-orange-600 transition-colors"
+            onClick={onShowDetails}
+        >
+            {activity.title}
+        </h3>
         
         <div className="mt-2 space-y-1 text-xs text-gray-600">
             <div className="flex items-center">
@@ -61,14 +69,12 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
         </div>
         
         <div className="mt-3 pt-3 border-t border-gray-100">
-             <a 
-                href={activity.detailsUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
+             <button 
+                onClick={onShowDetails}
                 className="w-full text-center bg-orange-500 text-white px-3 py-2 rounded-full hover:bg-orange-600 transition-colors duration-300 block font-semibold text-sm"
             >
               לפרטים נוספים
-            </a>
+            </button>
         </div>
       </div>
     </div>

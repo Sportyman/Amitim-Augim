@@ -1,19 +1,21 @@
+
 import React from 'react';
 import { Activity } from '../types';
 import { UsersIcon, ClockIcon } from './icons';
 
 interface ActivityListItemProps {
   activity: Activity;
+  onShowDetails: () => void;
 }
 
 const LocationIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
         <circle cx="12" cy="10" r="3"></circle>
     </svg>
 );
 
-const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity }) => {
+const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDetails }) => {
   const getKeywords = () => {
     let titleKeywords = activity.title.split('-')[0].trim();
     return `${titleKeywords},${activity.category}`;
@@ -31,15 +33,21 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity }) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 flex flex-col sm:flex-row hover:shadow-lg">
       <img 
-        className="w-full h-40 sm:w-48 sm:h-auto object-cover" 
+        className="w-full h-40 sm:w-48 sm:h-auto object-cover cursor-pointer" 
         src={unsplashUrl} 
         onError={handleImageError}
-        alt={activity.title} 
+        alt={activity.title}
+        onClick={onShowDetails}
       />
       <div className="p-4 flex flex-col flex-grow justify-between">
         <div>
             <div className="flex justify-between items-start">
-                <h3 className="text-lg font-bold text-gray-800">{activity.title}</h3>
+                <h3 
+                    className="text-lg font-bold text-gray-800 cursor-pointer hover:text-orange-600 transition-colors"
+                    onClick={onShowDetails}
+                >
+                    {activity.title}
+                </h3>
                 <div className="text-lg font-bold text-green-600 flex items-center flex-shrink-0 ml-4">
                     <span>{activity.price} ₪</span>
                 </div>
@@ -63,14 +71,12 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity }) => {
         </div>
         
         <div className="mt-4 pt-3 border-t border-gray-100 text-left">
-             <a 
-                href={activity.detailsUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
+             <button 
+                onClick={onShowDetails}
                 className="inline-block bg-orange-500 text-white px-5 py-2 rounded-full hover:bg-orange-600 transition-colors duration-300 font-semibold text-sm"
             >
               לפרטים נוספים
-            </a>
+            </button>
         </div>
       </div>
     </div>
