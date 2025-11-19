@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header';
 import CategoryFilter from './components/CategoryFilter';
@@ -16,15 +17,21 @@ import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from './components/icons'
 const parseAgeGroupToRange = (ageGroup: string): [number, number] | null => {
   if (!ageGroup) return null;
   
-  if (ageGroup.includes('רב גילאי')) {
-    return [0, 999];
+  if (ageGroup.includes('רב גילאי') || ageGroup.includes('לכל המשפחה')) {
+    return [0, 120];
   }
   
   const olderMatch = ageGroup.match(/(\d+)\s*ומעלה/);
   if (olderMatch) {
-    return [parseInt(olderMatch[1], 10), 999];
+    return [parseInt(olderMatch[1], 10), 120];
   }
   
+  // Handle cases like "מגיל 60"
+  const fromAgeMatch = ageGroup.match(/מגיל\s*(\d+)/);
+  if (fromAgeMatch) {
+     return [parseInt(fromAgeMatch[1], 10), 120];
+  }
+
   const rangeMatch = ageGroup.match(/(\d+)-(\d+)/);
   if (rangeMatch) {
     return [parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10)];
@@ -33,7 +40,10 @@ const parseAgeGroupToRange = (ageGroup: string): [number, number] | null => {
   const singleNumberMatch = ageGroup.match(/\d+/);
   if (singleNumberMatch) {
     const age = parseInt(singleNumberMatch[0], 10);
-    return [age, age];
+    // If only one number appears, treat it loosely (e.g. could be average age or starting age)
+    // For strictness, let's assume it's a starting age up to reasonable limit if context implies,
+    // but usually single number means "Age X". Let's do a small buffer.
+    return [age, age + 1]; 
   }
 
   return null;
@@ -49,7 +59,10 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [ageRange, setAgeRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
+  
+  // Changed from range object to single string logic
+  const [userAge, setUserAge] = useState<string>('');
+  
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
@@ -96,12 +109,9 @@ const App: React.FC = () => {
       setSelectedLocations(prev => prev.includes(location) ? prev.filter(l => l !== location) : [...prev, location]);
   };
 
-  const handleMinAgeChange = (value: string) => {
-    setAgeRange(prev => ({ ...prev, min: value.replace(/[^0-9]/g, '') }));
-  };
-
-  const handleMaxAgeChange = (value: string) => {
-    setAgeRange(prev => ({ ...prev, max: value.replace(/[^0-9]/g, '') }));
+  const handleUserAgeChange = (value: string) => {
+    // Allow only numbers
+    setUserAge(value.replace(/[^0-9]/g, ''));
   };
   
   const handleMinPriceChange = (value: string) => {
@@ -123,7 +133,7 @@ const App: React.FC = () => {
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedCategories([]);
-    setAgeRange({ min: '', max: '' });
+    setUserAge('');
     setPriceRange({ min: '', max: '' });
     setSelectedCities([]);
     setSelectedLocations([]);
@@ -160,20 +170,19 @@ const App: React.FC = () => {
       const cityMatch = selectedCities.length === 0 || selectedCities.includes(cityName);
       const locationMatch = selectedLocations.length === 0 || selectedLocations.includes(locationName);
       
-      const ageGroupMatch = (() => {
-        const { min: userMinText, max: userMaxText } = ageRange;
-        if (userMinText === '' && userMaxText === '') return true;
-
-        const userMin = userMinText !== '' ? parseInt(userMinText, 10) : 0;
-        const userMax = userMaxText !== '' ? parseInt(userMaxText, 10) : 999;
+      // New Single Age Logic
+      const ageMatch = (() => {
+        if (userAge === '') return true;
         
-        if (userMinText !== '' && userMaxText !== '' && userMin > userMax) return true;
-
+        const userAgeNum = parseInt(userAge, 10);
         const activityRange = parseAgeGroupToRange(activity.ageGroup);
-        if (!activityRange) return false;
+        
+        if (!activityRange) return true; // If we can't parse the activity age, show it to be safe
 
         const [activityMin, activityMax] = activityRange;
-        return activityMax >= userMin && activityMin <= userMax;
+        
+        // Check if the user's age falls within the activity's range
+        return userAgeNum >= activityMin && userAgeNum <= activityMax;
       })();
       
       const priceMatch = (() => {
@@ -187,9 +196,9 @@ const App: React.FC = () => {
       })();
 
 
-      return categoryMatch && termMatch && cityMatch && locationMatch && ageGroupMatch && priceMatch;
+      return categoryMatch && termMatch && cityMatch && locationMatch && ageMatch && priceMatch;
     });
-  }, [selectedCategories, searchTerm, relatedKeywords, activities, selectedCities, selectedLocations, ageRange, priceRange]);
+  }, [selectedCategories, searchTerm, relatedKeywords, activities, selectedCities, selectedLocations, userAge, priceRange]);
 
   const renderContent = () => {
     if (isLoadingActivities) {
@@ -286,11 +295,10 @@ const App: React.FC = () => {
                 <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isAdvancedSearchOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-100 mt-2 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Updated Age Filter (Single Input) */}
                             <AgeRangeFilter 
-                                minAge={ageRange.min}
-                                maxAge={ageRange.max}
-                                onMinAgeChange={handleMinAgeChange}
-                                onMaxAgeChange={handleMaxAgeChange}
+                                userAge={userAge}
+                                onUserAgeChange={handleUserAgeChange}
                             />
                              <PriceRangeFilter 
                                 minPrice={priceRange.min}
@@ -332,7 +340,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-gray-200 mt-auto py-8">
         <div className="container mx-auto px-4 text-center">
             <p className="text-gray-500 text-sm">
-                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.0.10
+                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.0.12
             </p>
         </div>
       </footer>

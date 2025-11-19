@@ -1,42 +1,34 @@
+
 import React from 'react';
 
 interface AgeRangeFilterProps {
-  minAge: string;
-  maxAge: string;
-  onMinAgeChange: (value: string) => void;
-  onMaxAgeChange: (value: string) => void;
+  userAge: string;
+  onUserAgeChange: (value: string) => void;
 }
 
-const AgeRangeFilter: React.FC<AgeRangeFilterProps> = ({ minAge, maxAge, onMinAgeChange, onMaxAgeChange }) => {
+const AgeRangeFilter: React.FC<AgeRangeFilterProps> = ({ userAge, onUserAgeChange }) => {
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-3">סינון לפי טווח גילאים</h3>
-      <div className="flex items-center gap-4 max-w-md">
-        <div className="flex-1">
-          <label htmlFor="min-age" className="block text-sm font-medium text-gray-700">מגיל</label>
+      <h3 className="text-lg font-semibold text-gray-800 mb-3">סינון לפי גיל</h3>
+      <div className="w-full">
+        <label htmlFor="user-age" className="block text-sm font-medium text-gray-700 mb-1">
+          בן/בת כמה את/ה?
+        </label>
+        <div className="relative">
           <input
             type="number"
-            id="min-age"
-            value={minAge}
-            onChange={(e) => onMinAgeChange(e.target.value)}
-            placeholder="לדוגמה: 7"
-            className="mt-1 w-full px-3 py-2 text-base text-gray-700 bg-white border border-gray-300 rounded-md focus:outline-none focus:border-orange-500 transition-colors duration-300"
+            id="user-age"
+            value={userAge}
+            onChange={(e) => onUserAgeChange(e.target.value)}
+            placeholder="הקלד גיל..."
+            className="w-full px-4 py-2 pr-4 pl-10 text-base text-gray-700 bg-white border border-gray-300 rounded-full focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all duration-300"
             min="0"
-            aria-label="גיל מינימלי"
+            max="120"
+            aria-label="הכנס גיל לסינון"
           />
-        </div>
-        <div className="flex-1">
-          <label htmlFor="max-age" className="block text-sm font-medium text-gray-700">עד גיל</label>
-          <input
-            type="number"
-            id="max-age"
-            value={maxAge}
-            onChange={(e) => onMaxAgeChange(e.target.value)}
-            placeholder="לדוגמה: 12"
-            className="mt-1 w-full px-3 py-2 text-base text-gray-700 bg-white border border-gray-300 rounded-md focus:outline-none focus:border-orange-500 transition-colors duration-300"
-            min="0"
-            aria-label="גיל מקסימלי"
-          />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <span className="text-gray-400 text-sm">שנים</span>
+          </div>
         </div>
       </div>
     </div>
