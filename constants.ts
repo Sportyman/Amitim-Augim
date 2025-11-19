@@ -14,13 +14,9 @@ export const CATEGORIES: Category[] = [
   // { id: 'outdoor', name: 'טיולים', icon: OutdoorIcon },
 ];
 
+// Leaving this object empty forces the navigation buttons to search by the "Center Name + City"
+// (e.g. "מרכז נינא, הרצליה") which is handled natively by Waze/Google Maps and is usually more accurate.
 export const CENTER_ADDRESSES: Record<string, string> = {
-  "מרכז נחלת עדה": "וינגייט 136, הרצליה",
-  "מרכז חוגים וולפסון": "צבי ש\"ץ 29, הרצליה",
-  "מרכז נינא": "דוד שמעוני 3, הרצליה",
-  "מרכז נוף ים": "שער הים 10, הרצליה",
-  "מרכז קהילתי יבור": "ההסתדרות 22, הרצליה",
-  "מרכז ל.י.ה - יד התשעה": "רביבים 1, הרצליה",
-  "מרכז מטאור": "אלתרמן 6, הרצליה",
-  "מרכז נווה עמל": "פוזנן 11, הרצליה",
+  // Add specific verified addresses here only if necessary. 
+  // Format: "Center Name": "Street Address, City"
 };
