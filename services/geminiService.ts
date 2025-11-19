@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 // FIX: Safely initialize API key to avoid immediate crash if environment variable is missing during initial load.
@@ -37,7 +38,9 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
       }
     });
 
-    const jsonString = response.text.trim();
+    // FIX: Safely access text property with optional chaining and default value to satisfy TypeScript strict null checks
+    const jsonString = response.text?.trim() || "";
+    
     if(jsonString) {
         const result = JSON.parse(jsonString);
         if (result && Array.isArray(result.keywords)) {
@@ -113,7 +116,9 @@ export const scrapeAndStructureData = async (html: string): Promise<string> => {
       }
     });
 
-    const jsonString = response.text.trim();
+    // FIX: Safely access text property with optional chaining and default value to satisfy TypeScript strict null checks
+    const jsonString = response.text?.trim() || "";
+    
     if (jsonString) {
       try {
         JSON.parse(jsonString);
