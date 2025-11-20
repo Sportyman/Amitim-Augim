@@ -1,10 +1,20 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  // Use local path since the file exists in the public folder of the workspace
-  const logoSrc = '/AmitimLogo.png';
+  // Logic to ensure logo always displays
+  const [logoSrc, setLogoSrc] = useState('/AmitimLogo.png');
+
+  const handleImageError = () => {
+    if (logoSrc === '/AmitimLogo.png') {
+        // Fallback 1: Try Direct GitHub Raw URL
+        setLogoSrc('https://raw.githubusercontent.com/Sportyman/Amitim-Augim/main/public/AmitimLogo.png');
+    } else if (logoSrc.includes('githubusercontent')) {
+        // Fallback 2: Revert to Imgur (Known working state)
+        setLogoSrc('https://i.imgur.com/oOqtYCK.jpeg');
+    }
+  };
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-20">
@@ -18,15 +28,16 @@ const Header: React.FC = () => {
              </Link>
           </div>
 
-          {/* Centered Logo with Overflow (Badge Effect) */}
+          {/* Centered Logo with Overflow */}
           {/* Centered absolutely in the middle of the header */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40">
             <Link to="/" className="flex items-center justify-center">
                 <img 
                   src={logoSrc}
+                  onError={handleImageError}
                   alt="עמיתים" 
-                  // Large size to create badge effect over the thin header
-                  className="h-32 w-auto object-contain drop-shadow-sm hover:opacity-90 transition-opacity"
+                  // h-28 is significantly larger than the h-16 header, creating the overlap effect
+                  className="h-28 w-auto object-contain drop-shadow-sm transition-opacity duration-300"
                 />
             </Link>
           </div>

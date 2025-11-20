@@ -8,8 +8,16 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string>('');
   
-  // Use local path since the file exists in the public folder of the workspace
-  const logoSrc = '/AmitimLogo.png';
+  // Logic to ensure logo always displays
+  const [logoSrc, setLogoSrc] = useState('/AmitimLogo.png');
+
+  const handleImageError = () => {
+    if (logoSrc === '/AmitimLogo.png') {
+        setLogoSrc('https://raw.githubusercontent.com/Sportyman/Amitim-Augim/main/public/AmitimLogo.png');
+    } else if (logoSrc.includes('githubusercontent')) {
+        setLogoSrc('https://i.imgur.com/oOqtYCK.jpeg');
+    }
+  };
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -54,6 +62,7 @@ const LoginPage: React.FC = () => {
              <Link to="/">
                 <img 
                   src={logoSrc}
+                  onError={handleImageError}
                   alt="עמיתים" 
                   className="h-40 w-auto hover:opacity-90 transition-opacity object-contain" 
                 />
