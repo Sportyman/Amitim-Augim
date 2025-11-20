@@ -284,7 +284,7 @@ const PublicHome: React.FC = () => {
                         className={`inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${isAdvancedSearchOpen ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50'}`}
                     >
                         <SlidersIcon className="w-4 h-4" />
-                        סינון מתקדם
+                        אפשרויות חיפוש נוספות
                         {isAdvancedSearchOpen ? <ChevronUpIcon className="w-4 h-4"/> : <ChevronDownIcon className="w-4 h-4"/>}
                     </button>
                 </div>

@@ -16,6 +16,12 @@ const PhoneIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const WhatsAppIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
+    </svg>
+);
+
 const MapPinIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -37,6 +43,13 @@ const UsersIcon: React.FC<{ className?: string }> = ({ className }) => (
     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
   </svg>
+);
+
+const UserIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+    </svg>
 );
 
 const NavigationIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -64,12 +77,25 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
   const phoneMatch = activity.description.match(/05\d-?\d{7}|0\d-?\d{7}/);
   const phoneNumber = phoneMatch ? phoneMatch[0] : null;
 
+  // WhatsApp Logic
+  let whatsappUrl = null;
+  if (phoneNumber) {
+      // Remove dashes and non-digits
+      const rawPhone = phoneNumber.replace(/\D/g, '');
+      // Check if it starts with 05 (mobile)
+      if (rawPhone.startsWith('05')) {
+          // Remove leading 0 and add 972
+          const internationalPhone = '972' + rawPhone.substring(1);
+          whatsappUrl = `https://wa.me/${internationalPhone}`;
+      }
+  }
+
   const getKeywords = () => {
     let titleKeywords = activity.title.split('-')[0].trim();
     return `${titleKeywords},${activity.category}`;
   };
   const unsplashUrl = `https://source.unsplash.com/600x400/?${encodeURIComponent(getKeywords())}`;
-  const fallbackUrl = `https://picsum.photos/seed/${activity.id}/600/400`;
+  const fallbackUrl = `https://picsum.photos/seed/${typeof activity.id === 'string' ? activity.id.charCodeAt(0) : activity.id}/600/400`;
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     if (e.currentTarget.src !== fallbackUrl) {
@@ -106,7 +132,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
         {/* Image Header */}
         <div className="relative h-48 sm:h-64 w-full shrink-0">
             <img 
-                src={unsplashUrl} 
+                src={activity.imageUrl && activity.imageUrl.length > 10 ? activity.imageUrl : unsplashUrl} 
                 onError={handleImageError}
                 alt={activity.title} 
                 className="w-full h-full object-cover"
@@ -142,6 +168,14 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                        </div>
                    </div>
                 </div>
+                
+                {activity.instructor && (
+                    <div className="flex items-center text-gray-700 col-span-1 sm:col-span-2">
+                       <UserIcon className="w-5 h-5 ml-3 text-sky-500" />
+                       <span className="font-medium">מדריך/ה: {activity.instructor}</span>
+                    </div>
+                )}
+
                 <div className="flex items-center text-gray-700">
                    <UsersIcon className="w-5 h-5 ml-3 text-sky-500" />
                    <span className="font-medium">{activity.ageGroup}</span>
@@ -176,16 +210,29 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-4 pt-4 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-100">
                 {phoneNumber && (
                     <a 
                         href={`tel:${phoneNumber}`}
-                        className="flex-1 bg-green-500 text-white text-center py-3 rounded-xl hover:bg-green-600 transition-colors font-bold flex items-center justify-center gap-2"
+                        className="flex-1 bg-sky-500 text-white text-center py-3 rounded-xl hover:bg-sky-600 transition-colors font-bold flex items-center justify-center gap-2"
                     >
                         <PhoneIcon className="w-5 h-5" />
                         חייג: {phoneNumber}
                     </a>
                 )}
+                
+                {whatsappUrl && (
+                    <a 
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 bg-green-500 text-white text-center py-3 rounded-xl hover:bg-green-600 transition-colors font-bold flex items-center justify-center gap-2"
+                    >
+                        <WhatsAppIcon className="w-5 h-5" />
+                        וואטסאפ
+                    </a>
+                )}
+
                 <button 
                     onClick={onClose}
                     className="flex-1 bg-gray-100 text-gray-700 text-center py-3 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
