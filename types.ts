@@ -3,7 +3,7 @@ import React from 'react';
 export interface Category {
   id: string;
   name: string;
-  icon: React.ComponentType<{ className?: string }>;
+  iconKey: string; // Changed from icon component to string key for DB storage
 }
 
 export interface Activity {

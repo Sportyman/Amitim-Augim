@@ -1,9 +1,11 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc } from 'firebase/firestore';
-import { Activity, AdminUser, UserRole } from '../types';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc, orderBy } from 'firebase/firestore';
+import { Activity, AdminUser, UserRole, Category } from '../types';
+import { CATEGORIES } from '../constants';
 
 const COLLECTION_NAME = 'activities';
 const USERS_COLLECTION = 'users';
+const CATEGORIES_COLLECTION = 'categories';
 
 export const dbService = {
   // --- Activity Management ---
@@ -56,9 +58,7 @@ export const dbService = {
   },
 
   importActivities: async (activities: Activity[]) => {
-    const batch = writeBatch(db);
     const collectionRef = collection(db, COLLECTION_NAME);
-
     const chunks = [];
     for (let i = 0; i < activities.length; i += 400) {
         chunks.push(activities.slice(i, i + 400));
@@ -79,7 +79,6 @@ export const dbService = {
   },
 
   updateActivitiesBatch: async (activityIds: string[], updates: Partial<Activity>) => {
-      const batch = writeBatch(db);
       const chunkedIds = [];
       for (let i = 0; i < activityIds.length; i += 400) {
           chunkedIds.push(activityIds.slice(i, i + 400));
@@ -114,6 +113,67 @@ export const dbService = {
      if (operationCounter > 0) {
          await currentBatch.commit();
      }
+  },
+
+  // --- Category Management ---
+
+  getAllCategories: async (): Promise<Category[]> => {
+    try {
+        const q = query(collection(db, CATEGORIES_COLLECTION));
+        const snapshot = await getDocs(q);
+        
+        // If DB is empty, return default constants (and optionally seed them)
+        if (snapshot.empty) {
+            return CATEGORIES; 
+        }
+
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+    } catch (error) {
+        console.error("Error getting categories:", error);
+        return CATEGORIES; // Fallback
+    }
+  },
+
+  addCategory: async (category: Omit<Category, 'id'>) => {
+      try {
+          await addDoc(collection(db, CATEGORIES_COLLECTION), category);
+      } catch (error) {
+          console.error("Error adding category:", error);
+          throw error;
+      }
+  },
+
+  updateCategory: async (id: string, updates: Partial<Category>) => {
+      try {
+          const catRef = doc(db, CATEGORIES_COLLECTION, id);
+          await updateDoc(catRef, updates);
+      } catch (error) {
+          console.error("Error updating category:", error);
+          throw error;
+      }
+  },
+
+  deleteCategory: async (id: string) => {
+      try {
+          await deleteDoc(doc(db, CATEGORIES_COLLECTION, id));
+      } catch (error) {
+          console.error("Error deleting category:", error);
+          throw error;
+      }
+  },
+
+  // Seed default categories if table is empty (Helper)
+  seedCategories: async () => {
+      const q = query(collection(db, CATEGORIES_COLLECTION));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) return;
+
+      const batch = writeBatch(db);
+      CATEGORIES.forEach(cat => {
+          const docRef = doc(collection(db, CATEGORIES_COLLECTION), cat.id); // Use fixed ID for initial seed
+          batch.set(docRef, { name: cat.name, iconKey: cat.iconKey });
+      });
+      await batch.commit();
   },
 
   // --- User/Role Management ---
