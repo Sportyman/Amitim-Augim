@@ -1,8 +1,16 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// FIX: Safely initialize API key to avoid immediate crash if environment variable is missing during initial load.
-const apiKey = process.env.API_KEY;
+// FIX: Safely initialize API key to avoid immediate crash if environment variable is missing or process is undefined.
+const getApiKey = () => {
+  try {
+    return (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : undefined;
+  } catch (e) {
+    return undefined;
+  }
+};
+
+const apiKey = getApiKey();
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const findRelatedKeywords = async (term: string): Promise<string[]> => {
@@ -16,7 +24,6 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   }
 
   try {
-    // FIX: Updated prompt to align with the responseSchema, ensuring the model returns a JSON object with a 'keywords' key for more reliable parsing.
     const prompt = `For the search term "${term}" on a Hebrew activity finder website, provide related keywords. For example, for "בריכה", suggest "שחייה", "מים", "קאנטרי". Return a JSON object where the key "keywords" is an array of Hebrew keyword strings.`;
     
     const response = await ai.models.generateContent({
@@ -38,7 +45,6 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
       }
     });
 
-    // FIX: Safely access text property with optional chaining and default value to satisfy TypeScript strict null checks
     const jsonString = response.text?.trim() || "";
     
     if(jsonString) {
@@ -55,7 +61,6 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   }
 };
 
-// FIX: Added missing scrapeAndStructureData function to parse HTML and extract activity data.
 export const scrapeAndStructureData = async (html: string): Promise<string> => {
   if (!html.trim()) {
     throw new Error("HTML input is empty.");
@@ -116,7 +121,6 @@ export const scrapeAndStructureData = async (html: string): Promise<string> => {
       }
     });
 
-    // FIX: Safely access text property with optional chaining and default value to satisfy TypeScript strict null checks
     const jsonString = response.text?.trim() || "";
     
     if (jsonString) {
