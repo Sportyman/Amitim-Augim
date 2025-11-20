@@ -8,7 +8,7 @@ import {
     Plus, Edit, Trash2, LogOut, Database, Upload, Download,
     Search, RefreshCw, LayoutGrid, List, Users,
     Menu, X, Image as ImageIcon, ChevronDown, ChevronUp,
-    Home, ArrowRight // Changed ArrowLeft to ArrowRight for RTL context
+    Home, ArrowRight, CheckCircle, Eye
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 
@@ -61,6 +61,7 @@ const BulkUpdateTool: React.FC<{
     const [updateField, setUpdateField] = useState<'imageUrl' | 'category' | 'price'>('imageUrl');
     const [updateValue, setUpdateValue] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showPreviewList, setShowPreviewList] = useState(true);
 
     const matchingActivities = activities.filter(a => {
         if (!searchValue) return false;
@@ -90,26 +91,32 @@ const BulkUpdateTool: React.FC<{
     };
 
     return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100 mb-8">
-            <div className="flex items-center gap-2 mb-4 text-indigo-700">
-                <RefreshCw className="w-5 h-5" />
-                <h3 className="text-lg font-bold">ניהול קבוצתי (Bulk Update)</h3>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-2 mb-4 text-indigo-700 border-b border-indigo-50 pb-4">
+                <div className="bg-indigo-100 p-2 rounded-lg">
+                    <RefreshCw className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-bold text-gray-800">ניהול ועריכה קבוצתית</h3>
+                    <p className="text-sm text-gray-500">איתור קבוצת חוגים ועדכון פרטים לכולם בבת אחת</p>
+                </div>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
-                כלי זה מאפשר לעדכן תמונות, קטגוריות או מחירים לקבוצה של חוגים בבת אחת.
-            </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Filter Section */}
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                    <h4 className="text-sm font-bold text-gray-700 mb-3">1. בחר חוגים לעדכון</h4>
-                    <div className="space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Step 1: Filter */}
+                <div className="lg:col-span-4 bg-gray-50 p-5 rounded-2xl border border-gray-200 flex flex-col h-full">
+                    <div className="flex items-center gap-2 mb-4">
+                        <span className="bg-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm">1</span>
+                        <h4 className="text-sm font-bold text-gray-800">סינון ואיתור חוגים</h4>
+                    </div>
+                    
+                    <div className="space-y-4 flex-1">
                         <div>
-                            <label className="text-xs text-gray-500">חפש לפי שדה:</label>
+                            <label className="text-xs font-semibold text-gray-500 mb-1 block">סנן לפי שדה:</label>
                             <select 
                                 value={searchField} 
                                 onChange={(e) => setSearchField(e.target.value as any)}
-                                className="block w-full mt-1 p-2 rounded-lg border border-gray-300 text-sm"
+                                className="block w-full p-3 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                             >
                                 <option value="title">שם החוג (מכיל טקסט)</option>
                                 <option value="category">קטגוריה נוכחית</option>
@@ -117,44 +124,101 @@ const BulkUpdateTool: React.FC<{
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs text-gray-500">ערך לחיפוש:</label>
-                            <input 
-                                type="text" 
-                                value={searchValue}
-                                onChange={(e) => setSearchValue(e.target.value)}
-                                placeholder="למשל: ג'ודו"
-                                className="block w-full mt-1 p-2 rounded-lg border border-gray-300 text-sm"
-                            />
+                            <label className="text-xs font-semibold text-gray-500 mb-1 block">ערך לחיפוש:</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    value={searchValue}
+                                    onChange={(e) => setSearchValue(e.target.value)}
+                                    placeholder={searchField === 'title' ? "למשל: ג'ודו" : searchField === 'category' ? "למשל: ספורט" : "למשל: מתנ\"ס יבור"}
+                                    className="block w-full p-3 pl-10 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                />
+                            </div>
                         </div>
-                        <div className="text-sm text-indigo-600 font-medium mt-2">
-                            נמצאו: {matchingActivities.length} חוגים
-                        </div>
+                        
+                        {searchValue && (
+                            <div className={`mt-4 p-3 rounded-xl border ${matchingActivities.length > 0 ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'} text-sm font-medium flex items-center justify-between`}>
+                                <span>נמצאו {matchingActivities.length} חוגים</span>
+                                {matchingActivities.length > 0 && (
+                                    <button onClick={() => setShowPreviewList(!showPreviewList)} className="hover:underline text-xs flex items-center gap-1">
+                                        <Eye className="w-3 h-3" />
+                                        {showPreviewList ? 'הסתר' : 'הצג'}
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Action Section */}
-                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
-                    <h4 className="text-sm font-bold text-indigo-900 mb-3">2. החל שינוי</h4>
-                    <div className="space-y-3">
+                {/* Step 2: Matching Results Preview */}
+                <div className="lg:col-span-4 flex flex-col h-full bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                         <div className="flex items-center gap-2">
+                            <span className="bg-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm">2</span>
+                            <h4 className="text-sm font-bold text-gray-800">החוגים שנמצאו</h4>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-2 max-h-[300px] bg-gray-50/50">
+                        {matchingActivities.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-400 text-sm p-8 text-center">
+                                <Search className="w-8 h-8 mb-2 opacity-50" />
+                                <p>התחל לסנן כדי לראות חוגים כאן</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-2">
+                                {showPreviewList && matchingActivities.map(activity => (
+                                    <div key={activity.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="w-10 h-10 rounded-md bg-gray-200 overflow-hidden flex-shrink-0">
+                                            {activity.imageUrl ? (
+                                                <img src={activity.imageUrl} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-4 h-4 text-gray-400" /></div>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-bold text-gray-800 truncate">{activity.title}</p>
+                                            <p className="text-[10px] text-gray-500 truncate">{activity.location} | {activity.ageGroup}</p>
+                                        </div>
+                                        <div className="text-xs font-medium text-gray-400 px-2">
+                                            #{activity.id}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Step 3: Action */}
+                <div className="lg:col-span-4 bg-indigo-50 p-5 rounded-2xl border border-indigo-200 flex flex-col h-full shadow-sm">
+                     <div className="flex items-center gap-2 mb-4">
+                        <span className="bg-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm text-indigo-600">3</span>
+                        <h4 className="text-sm font-bold text-indigo-900">ביצוע העדכון</h4>
+                    </div>
+
+                    <div className="space-y-4 flex-1">
                         <div>
-                            <label className="text-xs text-indigo-800">שדה לעדכון:</label>
+                            <label className="text-xs font-semibold text-indigo-800 mb-1 block">איזה שדה לעדכן?</label>
                             <select 
                                 value={updateField} 
                                 onChange={(e) => setUpdateField(e.target.value as any)}
-                                className="block w-full mt-1 p-2 rounded-lg border border-indigo-300 text-sm"
+                                className="block w-full p-3 rounded-xl border border-indigo-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                             >
-                                <option value="imageUrl">קישור לתמונה (URL)</option>
-                                <option value="category">שנה קטגוריה ל...</option>
-                                <option value="price">שנה מחיר ל...</option>
+                                <option value="imageUrl">תמונה ראשית (URL)</option>
+                                <option value="category">שיוך לקטגוריה</option>
+                                <option value="price">מחיר החוג</option>
                             </select>
                         </div>
+
                         <div>
-                            <label className="text-xs text-indigo-800">ערך חדש:</label>
+                            <label className="text-xs font-semibold text-indigo-800 mb-1 block">ערך חדש:</label>
                             {updateField === 'category' ? (
                                 <select 
                                     value={updateValue}
                                     onChange={(e) => setUpdateValue(e.target.value)}
-                                    className="block w-full mt-1 p-2 rounded-lg border border-indigo-300 text-sm"
+                                    className="block w-full p-3 rounded-xl border border-indigo-300 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                                 >
                                     <option value="">בחר קטגוריה...</option>
                                     {CATEGORIES.map(c => (
@@ -166,19 +230,47 @@ const BulkUpdateTool: React.FC<{
                                     type={updateField === 'price' ? 'number' : 'text'} 
                                     value={updateValue}
                                     onChange={(e) => setUpdateValue(e.target.value)}
-                                    placeholder={updateField === 'imageUrl' ? 'https://...' : 'ערך חדש'}
-                                    className="block w-full mt-1 p-2 rounded-lg border border-indigo-300 text-sm"
+                                    placeholder={updateField === 'imageUrl' ? 'https://...' : 'הכנס ערך חדש'}
+                                    className="block w-full p-3 rounded-xl border border-indigo-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-left dir-ltr"
+                                    dir={updateField === 'imageUrl' ? 'ltr' : 'rtl'}
                                 />
                             )}
                         </div>
-                        <button 
-                            onClick={handleExecute}
-                            disabled={matchingActivities.length === 0 || !updateValue || isProcessing}
-                            className="w-full mt-4 bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            {isProcessing ? 'מעדכן...' : 'בצע עדכון גורף'}
-                        </button>
+
+                        {/* Live Preview of the Update Value */}
+                        {updateValue && (
+                            <div className="mt-2 bg-white/60 p-3 rounded-lg border border-indigo-100">
+                                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">תצוגה מקדימה לשינוי</span>
+                                {updateField === 'imageUrl' ? (
+                                    <div className="relative h-24 w-full rounded-md overflow-hidden bg-gray-100 group">
+                                        <img src={updateValue} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150?text=Error')} />
+                                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
+                                    </div>
+                                ) : updateField === 'price' ? (
+                                    <div className="text-lg font-bold text-green-600">₪{updateValue}</div>
+                                ) : (
+                                    <span className="inline-block px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-bold">
+                                        {updateValue}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
+
+                    <button 
+                        onClick={handleExecute}
+                        disabled={matchingActivities.length === 0 || !updateValue || isProcessing}
+                        className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
+                    >
+                        {isProcessing ? (
+                            <span className="animate-pulse">מעדכן נתונים...</span>
+                        ) : (
+                            <>
+                                <span>עדכן {matchingActivities.length} חוגים</span>
+                                <CheckCircle className="w-4 h-4" />
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
         </div>
@@ -308,7 +400,7 @@ const UserManagement: React.FC = () => {
                                         className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors"
                                         title="הסר משתמש"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <span><Trash2 className="w-4 h-4" /></span>
                                     </button>
                                 </td>
                             </tr>
@@ -862,7 +954,7 @@ const AdminDashboard: React.FC = () => {
                                                                     )}
                                                                     {canDelete(userRole) && (
                                                                         <button onClick={() => handleDelete(activity.id)} className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors">
-                                                                            <Trash2 className="w-4 h-4" /> מחק
+                                                                            <span><Trash2 className="w-4 h-4" /></span> מחק
                                                                         </button>
                                                                     )}
                                                                 </div>
