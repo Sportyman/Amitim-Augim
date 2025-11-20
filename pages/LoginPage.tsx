@@ -28,7 +28,8 @@ const LoginPage: React.FC = () => {
       } else if (err?.code === 'auth/popup-closed-by-user') {
         msg = "החלון נסגר לפני סיום ההתחברות.";
       } else if (err?.code === 'auth/unauthorized-domain') {
-        msg = "דומיין זה אינו מורשה להתחברות. (יש להוסיף את הדומיין ב-Firebase Console)";
+        const currentDomain = window.location.hostname;
+        msg = `הדומיין הנוכחי (${currentDomain}) אינו מורשה. יש להעתיק אותו ולהוסיף ב-Firebase Console תחת Authentication > Settings > Authorized domains.`;
       } else if (err?.message) {
         msg = `שגיאה: ${err.message}`;
       }
@@ -54,7 +55,7 @@ const LoginPage: React.FC = () => {
         <p className="text-gray-600 mb-6">מערכת ניהול חוגים ופעילויות</p>
         
         {error && (
-            <div className="mb-6 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+            <div className="mb-6 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 break-words select-text">
                 {error}
             </div>
         )}
