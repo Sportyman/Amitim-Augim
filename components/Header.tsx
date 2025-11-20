@@ -25,7 +25,7 @@ const Header: React.FC = () => {
                   onError={() => setImageError(true)}
                 />
               ) : (
-                <span className="text-3xl font-bold text-orange-500 tracking-wide">
+                <span className="text-3xl font-bold text-sky-500 tracking-wide">
                   עמיתים
                 </span>
               )}

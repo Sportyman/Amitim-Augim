@@ -61,14 +61,14 @@ const LoginPage: React.FC = () => {
         )}
 
         {user && !isAdmin ? (
-            <div className="mb-6 p-4 bg-orange-50 text-orange-800 rounded-xl border border-orange-100">
+            <div className="mb-6 p-4 bg-sky-50 text-sky-800 rounded-xl border border-sky-100">
                 <p className="font-bold mb-2">אין הרשאת גישה</p>
                 <p className="text-sm mb-4">
                     החשבון <strong>{user.email}</strong> אינו מוגדר כמנהל מערכת.
                 </p>
                 <button 
                     onClick={handleLogout}
-                    className="text-sm underline font-semibold hover:text-orange-900"
+                    className="text-sm underline font-semibold hover:text-sky-900"
                 >
                     התנתק ונסה חשבון אחר
                 </button>
@@ -84,7 +84,7 @@ const LoginPage: React.FC = () => {
         )}
         
         <div className="border-t pt-6">
-            <Link to="/" className="text-sm text-gray-500 hover:text-orange-500 transition-colors font-medium">
+            <Link to="/" className="text-sm text-gray-500 hover:text-sky-500 transition-colors font-medium">
                 ← חזרה לדף הבית
             </Link>
         </div>

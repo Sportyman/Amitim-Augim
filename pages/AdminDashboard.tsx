@@ -249,7 +249,7 @@ const BulkUpdateTool: React.FC<{
                                 ) : updateField === 'price' ? (
                                     <div className="text-lg font-bold text-green-600">₪{updateValue}</div>
                                 ) : (
-                                    <span className="inline-block px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-bold">
+                                    <span className="inline-block px-3 py-1 bg-sky-100 text-sky-800 rounded-full text-sm font-bold">
                                         {updateValue}
                                     </span>
                                 )}
@@ -610,7 +610,7 @@ const AdminDashboard: React.FC = () => {
 
   if (isLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
         <p className="text-gray-500 font-medium">טוען מערכת ניהול...</p>
     </div>
   );
@@ -621,8 +621,8 @@ const AdminDashboard: React.FC = () => {
       {/* Mobile Header */}
       <div className="md:hidden bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-30">
           <div className="flex items-center gap-2">
-            <div className="bg-orange-100 p-1.5 rounded-lg">
-                <Database className="w-5 h-5 text-orange-600" />
+            <div className="bg-sky-100 p-1.5 rounded-lg">
+                <Database className="w-5 h-5 text-sky-600" />
             </div>
             <span className="font-bold text-gray-800">ניהול חוגים</span>
           </div>
@@ -638,8 +638,8 @@ const AdminDashboard: React.FC = () => {
           ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
           <div className="p-6 border-b border-gray-100 hidden md:flex items-center gap-3">
-              <div className="bg-orange-100 p-2 rounded-lg">
-                  <Database className="w-6 h-6 text-orange-600" />
+              <div className="bg-sky-100 p-2 rounded-lg">
+                  <Database className="w-6 h-6 text-sky-600" />
               </div>
               <h1 className="text-xl font-bold text-gray-800">מערכת ניהול</h1>
           </div>
@@ -647,7 +647,7 @@ const AdminDashboard: React.FC = () => {
           <div className="p-4 space-y-1">
               <button 
                 onClick={() => { setCurrentView('list'); setIsMobileMenuOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'list' ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'list' ? 'bg-sky-50 text-sky-700' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                   <List className="w-5 h-5" />
                   רשימת חוגים
@@ -678,7 +678,7 @@ const AdminDashboard: React.FC = () => {
 
           <div className="absolute bottom-0 w-full p-4 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-3 mb-4 px-2">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${userRole === 'super_admin' ? 'bg-purple-600' : 'bg-orange-500'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${userRole === 'super_admin' ? 'bg-purple-600' : 'bg-sky-500'}`}>
                       {user?.email?.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -713,7 +713,7 @@ const AdminDashboard: React.FC = () => {
                 </button>
                 <button 
                     onClick={() => navigate('/')} 
-                    className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-full shadow-sm hover:bg-orange-700 transition-all text-sm font-medium"
+                    className="flex items-center gap-2 bg-sky-600 text-white px-4 py-2 rounded-full shadow-sm hover:bg-sky-700 transition-all text-sm font-medium"
                 >
                     <Home className="w-4 h-4" />
                     חזרה לאפליקציה
@@ -746,7 +746,7 @@ const AdminDashboard: React.FC = () => {
 
                         <button 
                             onClick={handleAdd} 
-                            className="flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-full hover:bg-orange-600 transition-all shadow-md hover:shadow-lg text-sm font-bold"
+                            className="flex items-center gap-2 bg-sky-500 text-white px-5 py-2.5 rounded-full hover:bg-sky-600 transition-all shadow-md hover:shadow-lg text-sm font-bold"
                         >
                             <Plus className="w-5 h-5" />
                             <span className="hidden sm:inline">חוג חדש</span>
@@ -772,14 +772,14 @@ const AdminDashboard: React.FC = () => {
                                 placeholder="חיפוש חופשי (שם, מיקום)..." 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pr-10 pl-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm"
+                                className="w-full pr-10 pl-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
                             />
                         </div>
                         <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0">
                             <select 
                                 value={filterCategory}
                                 onChange={(e) => setFilterCategory(e.target.value)}
-                                className="pr-8 pl-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer min-w-[140px]"
+                                className="pr-8 pl-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none cursor-pointer min-w-[140px]"
                             >
                                 <option value="all">כל הקטגוריות</option>
                                 {CATEGORIES.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -787,7 +787,7 @@ const AdminDashboard: React.FC = () => {
                              <select 
                                 value={filterLocation}
                                 onChange={(e) => setFilterLocation(e.target.value)}
-                                className="pr-8 pl-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer min-w-[140px]"
+                                className="pr-8 pl-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none cursor-pointer min-w-[140px]"
                             >
                                 <option value="all">כל המיקומים</option>
                                 {availableLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
@@ -797,13 +797,13 @@ const AdminDashboard: React.FC = () => {
 
                     {/* Empty State / Migration */}
                     {activities.length === 0 && !isLoading && canCreate(userRole) && (
-                        <div className="bg-white rounded-2xl shadow-sm border border-orange-100 p-8 text-center">
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-50 mb-4">
-                                <Database className="w-8 h-8 text-orange-500" />
+                        <div className="bg-white rounded-2xl shadow-sm border border-sky-100 p-8 text-center">
+                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-50 mb-4">
+                                <Database className="w-8 h-8 text-sky-500" />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-2">אין נתונים במערכת</h3>
                             <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6">
-                                <button onClick={handleInitialMigration} className="px-5 py-2 bg-orange-100 text-orange-700 rounded-lg font-medium hover:bg-orange-200 transition-colors">
+                                <button onClick={handleInitialMigration} className="px-5 py-2 bg-sky-100 text-sky-700 rounded-lg font-medium hover:bg-sky-200 transition-colors">
                                     טען נתוני דמו
                                 </button>
                                 <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileUpload}/>
@@ -833,7 +833,7 @@ const AdminDashboard: React.FC = () => {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start">
                                                 <h3 className="font-bold text-gray-900 truncate">{activity.title}</h3>
-                                                <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                <span className="bg-sky-100 text-sky-800 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
                                                     {activity.category}
                                                 </span>
                                             </div>
@@ -884,7 +884,7 @@ const AdminDashboard: React.FC = () => {
                                         <React.Fragment key={activity.id}>
                                             <tr 
                                                 onClick={() => toggleRowExpansion(activity.id)} 
-                                                className={`cursor-pointer transition-colors ${expandedActivityId === activity.id ? 'bg-orange-50' : 'hover:bg-gray-50'}`}
+                                                className={`cursor-pointer transition-colors ${expandedActivityId === activity.id ? 'bg-sky-50' : 'hover:bg-gray-50'}`}
                                             >
                                                 <td className="px-6 py-4 text-gray-400">
                                                     {expandedActivityId === activity.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -905,7 +905,7 @@ const AdminDashboard: React.FC = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className="inline-flex px-2.5 py-0.5 text-xs font-medium text-orange-800 bg-orange-100 rounded-full">
+                                                    <span className="inline-flex px-2.5 py-0.5 text-xs font-medium text-sky-800 bg-sky-100 rounded-full">
                                                         {activity.category}
                                                     </span>
                                                 </td>

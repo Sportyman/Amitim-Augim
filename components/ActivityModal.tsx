@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Activity } from '../types';
 import { CENTER_ADDRESSES } from '../constants';
@@ -113,7 +112,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                 className="w-full h-full object-cover"
             />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent w-full p-6 pt-20">
-                <span className="inline-block px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full mb-2 shadow-sm">
+                <span className="inline-block px-3 py-1 bg-sky-500 text-white text-xs font-bold rounded-full mb-2 shadow-sm">
                     {activity.category}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white shadow-black drop-shadow-md">{activity.title}</h2>
@@ -126,7 +125,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
             {/* Key Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm">
                 <div className="flex items-start text-gray-700 col-span-1 sm:col-span-2">
-                   <MapPinIcon className="w-5 h-5 ml-3 text-orange-500 flex-shrink-0 mt-0.5" />
+                   <MapPinIcon className="w-5 h-5 ml-3 text-sky-500 flex-shrink-0 mt-0.5" />
                    <div>
                        <span className="font-bold block">{activity.location}</span>
                        {specificAddress && <span className="text-gray-500 text-xs block mt-1">{specificAddress}</span>}
@@ -144,15 +143,15 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                    </div>
                 </div>
                 <div className="flex items-center text-gray-700">
-                   <UsersIcon className="w-5 h-5 ml-3 text-orange-500" />
+                   <UsersIcon className="w-5 h-5 ml-3 text-sky-500" />
                    <span className="font-medium">{activity.ageGroup}</span>
                 </div>
                 <div className="flex items-center text-gray-700">
-                   <ClockIcon className="w-5 h-5 ml-3 text-orange-500" />
+                   <ClockIcon className="w-5 h-5 ml-3 text-sky-500" />
                    <span className="font-medium">{activity.schedule}</span>
                 </div>
                 <div className="flex items-center text-gray-700">
-                   <span className="w-5 h-5 ml-3 text-center text-orange-500 font-bold">₪</span>
+                   <span className="w-5 h-5 ml-3 text-center text-sky-500 font-bold">₪</span>
                    <span className="font-bold text-lg text-green-600">{activity.price} ₪</span>
                 </div>
             </div>

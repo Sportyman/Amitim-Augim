@@ -192,7 +192,7 @@ const PublicHome: React.FC = () => {
     if (isLoadingActivities) {
         return (
             <div className="flex flex-col items-center justify-center py-20">
-                 <svg className="animate-spin h-10 w-10 text-orange-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                 <svg className="animate-spin h-10 w-10 text-sky-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -215,7 +215,7 @@ const PublicHome: React.FC = () => {
                 </p>
                 <button 
                     onClick={resetFilters}
-                    className="px-6 py-2 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors font-medium shadow-sm hover:shadow-md"
+                    className="px-6 py-2 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition-colors font-medium shadow-sm hover:shadow-md"
                 >
                     נקה את כל הסינונים
                 </button>
@@ -255,7 +255,7 @@ const PublicHome: React.FC = () => {
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans flex flex-col">
       <Header />
       <main className="flex-grow">
-        <div className="bg-gradient-to-br from-orange-50 to-rose-50 pb-10">
+        <div className="bg-gradient-to-br from-sky-50 to-blue-50 pb-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
             <section className="text-center mb-10">
               <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
@@ -325,7 +325,7 @@ const PublicHome: React.FC = () => {
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
           <div className="flex justify-between items-center mb-6">
             <p className="text-gray-600">
-              נמצאו <span className="font-bold text-orange-600 text-lg">{filteredActivities.length}</span> תוצאות
+              נמצאו <span className="font-bold text-sky-600 text-lg">{filteredActivities.length}</span> תוצאות
             </p>
             <ViewSwitcher currentView={viewMode} onViewChange={setViewMode} />
           </div>

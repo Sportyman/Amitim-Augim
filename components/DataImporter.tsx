@@ -46,7 +46,7 @@ const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
   };
 
   return (
-    <section className="bg-white p-6 rounded-lg shadow-md mb-12 border-2 border-dashed border-orange-300">
+    <section className="bg-white p-6 rounded-lg shadow-md mb-12 border-2 border-dashed border-sky-300">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">כלי ייבוא וייצוא נתונים (לאדמין בלבד)</h2>
       <p className="mb-4 text-gray-600">
         זהו כלי פיתוח זמני. כדי לעדכן חוגים, הדבק את קוד המקור המלא (View Page Source) של עמוד הפעילויות ולחץ על "חלץ נתונים".
@@ -61,7 +61,7 @@ const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
             value={htmlInput}
             onChange={(e) => setHtmlInput(e.target.value)}
             placeholder="<html>...</html>"
-            className="w-full h-64 p-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 font-mono text-sm"
+            className="w-full h-64 p-3 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 font-mono text-sm"
           />
         </div>
         <div>
@@ -81,7 +81,7 @@ const DataImporter: React.FC<DataImporterProps> = ({ currentActivities }) => {
         <button
           onClick={handleScrape}
           disabled={isLoading || !htmlInput}
-          className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-lg shadow-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="px-6 py-2 bg-sky-500 text-white font-semibold rounded-lg shadow-md hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? (
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

@@ -46,7 +46,7 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
         <div>
             <div className="flex justify-between items-start">
                 <h3 
-                    className="text-lg font-bold text-gray-800 cursor-pointer hover:text-orange-600 transition-colors"
+                    className="text-lg font-bold text-gray-800 cursor-pointer hover:text-sky-600 transition-colors"
                     onClick={onShowDetails}
                 >
                     {activity.title}
@@ -55,7 +55,7 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
                     <span>{activity.price} ₪</span>
                 </div>
             </div>
-            <span className="text-xs text-orange-500 font-semibold bg-orange-100 px-2 py-1 rounded-full">{activity.category}</span>
+            <span className="text-xs text-sky-500 font-semibold bg-sky-100 px-2 py-1 rounded-full">{activity.category}</span>
 
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
                 <div className="flex items-center hover:text-blue-600 transition-colors group">
@@ -84,7 +84,7 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
         <div className="mt-4 pt-3 border-t border-gray-100 text-left">
              <button 
                 onClick={onShowDetails}
-                className="inline-block bg-orange-500 text-white px-5 py-2 rounded-full hover:bg-orange-600 transition-colors duration-300 font-semibold text-sm"
+                className="inline-block bg-sky-500 text-white px-5 py-2 rounded-full hover:bg-sky-600 transition-colors duration-300 font-semibold text-sm"
             >
               לפרטים נוספים
             </button>

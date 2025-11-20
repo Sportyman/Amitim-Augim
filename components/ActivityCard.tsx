@@ -47,13 +47,13 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
       />
       <div className="p-3 flex flex-col flex-grow">
         <div className="flex justify-between items-start">
-            <span className="text-xs text-orange-500 font-semibold bg-orange-100 px-2 py-1 rounded-full">{activity.category}</span>
+            <span className="text-xs text-sky-500 font-semibold bg-sky-100 px-2 py-1 rounded-full">{activity.category}</span>
             <div className="text-base font-bold text-green-600 flex items-center">
                 <span>{activity.price} ₪</span>
             </div>
         </div>
         <h3 
-            className="mt-1 text-base font-bold text-gray-800 flex-grow cursor-pointer hover:text-orange-600 transition-colors"
+            className="mt-1 text-base font-bold text-gray-800 flex-grow cursor-pointer hover:text-sky-600 transition-colors"
             onClick={onShowDetails}
         >
             {activity.title}
@@ -85,7 +85,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
         <div className="mt-3 pt-3 border-t border-gray-100">
              <button 
                 onClick={onShowDetails}
-                className="w-full text-center bg-orange-500 text-white px-3 py-2 rounded-full hover:bg-orange-600 transition-colors duration-300 block font-semibold text-sm"
+                className="w-full text-center bg-sky-500 text-white px-3 py-2 rounded-full hover:bg-sky-600 transition-colors duration-300 block font-semibold text-sm"
             >
               לפרטים נוספים
             </button>

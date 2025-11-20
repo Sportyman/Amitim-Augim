@@ -9,7 +9,7 @@ interface ViewSwitcherProps {
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }) => {
   const baseClasses = "p-2 rounded-md transition-colors duration-200";
-  const activeClasses = "bg-orange-100 text-orange-600";
+  const activeClasses = "bg-sky-100 text-sky-600";
   const inactiveClasses = "text-gray-400 hover:bg-gray-100 hover:text-gray-600";
 
   return (

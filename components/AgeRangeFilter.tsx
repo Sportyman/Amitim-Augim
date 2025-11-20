@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface AgeRangeFilterProps {
@@ -21,7 +20,7 @@ const AgeRangeFilter: React.FC<AgeRangeFilterProps> = ({ userAge, onUserAgeChang
             value={userAge}
             onChange={(e) => onUserAgeChange(e.target.value)}
             placeholder="הקלד גיל..."
-            className="w-full px-4 py-2 pr-4 pl-10 text-base text-gray-700 bg-white border border-gray-300 rounded-full focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all duration-300"
+            className="w-full px-4 py-2 pr-4 pl-10 text-base text-gray-700 bg-white border border-gray-300 rounded-full focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all duration-300"
             min="0"
             max="120"
             aria-label="הכנס גיל לסינון"

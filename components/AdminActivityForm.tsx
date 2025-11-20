@@ -237,12 +237,12 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="col-span-1 md:col-span-2">
                             <label className="block text-sm font-bold text-gray-700 mb-1">שם הפעילות</label>
-                            <input required type="text" name="title" value={formData.title} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-all" placeholder="לדוגמה: ג'ודו לילדים" />
+                            <input required type="text" name="title" value={formData.title} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none transition-all" placeholder="לדוגמה: ג'ודו לילדים" />
                         </div>
                         
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">קטגוריה</label>
-                            <select name="category" value={formData.category} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none bg-white">
+                            <select name="category" value={formData.category} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none bg-white">
                                 {CATEGORIES.map(c => (
                                     <option key={c.id} value={c.name}>{c.name}</option>
                                 ))}
@@ -251,28 +251,28 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
                         
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">מחיר (₪)</label>
-                            <input type="number" name="price" value={formData.price} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none" />
+                            <input type="number" name="price" value={formData.price} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" />
                         </div>
                         
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">קהל יעד (גיל)</label>
-                            <input required type="text" name="ageGroup" value={formData.ageGroup} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none" placeholder="לדוגמה: גילאי 6-9"/>
+                            <input required type="text" name="ageGroup" value={formData.ageGroup} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" placeholder="לדוגמה: גילאי 6-9"/>
                         </div>
                         
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">מיקום</label>
-                            <input required type="text" name="location" value={formData.location} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none" placeholder="מרכז קהילתי..." />
+                            <input required type="text" name="location" value={formData.location} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" placeholder="מרכז קהילתי..." />
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
                             <label className="block text-sm font-bold text-gray-700 mb-1">לו"ז (ימים ושעות)</label>
-                            <input required type="text" name="schedule" value={formData.schedule} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none" placeholder="ימי ב' ו-ה', 17:00-18:00" />
+                            <input required type="text" name="schedule" value={formData.schedule} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" placeholder="ימי ב' ו-ה', 17:00-18:00" />
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
                             <label className="block text-sm font-bold text-gray-700 mb-1">קישור לתמונה</label>
                             <div className="flex gap-2">
-                                <input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none text-left dir-ltr" placeholder="https://..." dir="ltr" />
+                                <input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none text-left dir-ltr" placeholder="https://..." dir="ltr" />
                                 {formData.imageUrl && (
                                     <button 
                                         type="button"
@@ -290,12 +290,12 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
 
                         <div className="col-span-1 md:col-span-2">
                             <label className="block text-sm font-bold text-gray-700 mb-1">תיאור מלא</label>
-                            <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none resize-none" placeholder="תיאור מפורט של החוג..." />
+                            <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none resize-none" placeholder="תיאור מפורט של החוג..." />
                         </div>
                         
                          <div className="col-span-1 md:col-span-2">
                             <label className="block text-sm font-bold text-gray-700 mb-1">שם המדריך/ה (אופציונלי)</label>
-                            <input type="text" name="instructor" value={formData.instructor || ''} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none" />
+                            <input type="text" name="instructor" value={formData.instructor || ''} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" />
                         </div>
                     </div>
                 </form>
@@ -331,7 +331,7 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
             <button 
                 onClick={handleSubmit} 
                 disabled={loading} 
-                className="px-8 py-2.5 text-white bg-orange-600 hover:bg-orange-700 rounded-lg font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-2.5 text-white bg-sky-600 hover:bg-sky-700 rounded-lg font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
                 {loading && <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>}
                 {initialData ? 'שמור שינויים' : 'צור חוג חדש'}
