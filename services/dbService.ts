@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch } from 'firebase/firestore';
 import { Activity } from '../types';
 
 const COLLECTION_NAME = 'activities';
@@ -8,7 +8,7 @@ export const dbService = {
   // Get all activities
   getAllActivities: async (): Promise<Activity[]> => {
     try {
-      const q = query(collection(db, COLLECTION_NAME)); // Add orderBy if needed
+      const q = query(collection(db, COLLECTION_NAME)); 
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -38,7 +38,7 @@ export const dbService = {
   updateActivity: async (id: string, updates: Partial<Activity>) => {
     try {
       const activityRef = doc(db, COLLECTION_NAME, id);
-      // Remove id from updates if present to avoid redundancy
+      // Remove id from updates if present to avoid redundancy and type conflicts
       const { id: _, ...dataToUpdate } = updates as any;
       await updateDoc(activityRef, dataToUpdate);
     } catch (error) {
@@ -57,16 +57,41 @@ export const dbService = {
     }
   },
 
-  // Bulk Import (Migration Tool)
+  // Bulk Import (Migration Tool) - Optimized with Batch
   importActivities: async (activities: Activity[]) => {
-    const batchPromises = activities.map(activity => {
-        // Remove numeric ID to let Firestore generate string IDs
-        const { id, ...data } = activity;
-        return addDoc(collection(db, COLLECTION_NAME), {
-            ...data,
-            createdAt: new Date()
+    const batch = writeBatch(db);
+    const collectionRef = collection(db, COLLECTION_NAME);
+
+    // Process in chunks of 500 (Firestore batch limit)
+    const chunks = [];
+    for (let i = 0; i < activities.length; i += 400) {
+        chunks.push(activities.slice(i, i + 400));
+    }
+
+    for (const chunk of chunks) {
+        const chunkBatch = writeBatch(db);
+        chunk.forEach((activity) => {
+            // IMPORTANT: Remove the old numeric ID and let Firestore generate a new string ID
+            // This prevents conflicts and ensures consistency.
+            const { id, ...data } = activity;
+            const newDocRef = doc(collectionRef);
+            chunkBatch.set(newDocRef, {
+                ...data,
+                createdAt: new Date()
+            });
         });
-    });
-    await Promise.all(batchPromises);
+        await chunkBatch.commit();
+    }
+  },
+  
+  // Delete All (Use with caution - for resetting DB)
+  deleteAllActivities: async () => {
+     const q = query(collection(db, COLLECTION_NAME));
+     const snapshot = await getDocs(q);
+     const batch = writeBatch(db);
+     snapshot.docs.forEach((doc) => {
+         batch.delete(doc.ref);
+     });
+     await batch.commit();
   }
 };
