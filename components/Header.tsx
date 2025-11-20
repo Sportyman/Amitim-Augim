@@ -3,8 +3,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  // Direct link as requested
-  const logoSrc = 'https://raw.githubusercontent.com/Sportyman/Amitim-Augim/refs/heads/main/public/AmitimLogo.png';
+  // Use local path since the file exists in the public folder of the workspace
+  const logoSrc = '/AmitimLogo.png';
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-20">
@@ -18,7 +18,7 @@ const Header: React.FC = () => {
              </Link>
           </div>
 
-          {/* Centered Logo with Overflow */}
+          {/* Centered Logo with Overflow (Badge Effect) */}
           {/* Centered absolutely in the middle of the header */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40">
             <Link to="/" className="flex items-center justify-center">

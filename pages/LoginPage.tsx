@@ -8,8 +8,8 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string>('');
   
-  // Direct link as requested
-  const logoSrc = 'https://raw.githubusercontent.com/Sportyman/Amitim-Augim/refs/heads/main/public/AmitimLogo.png';
+  // Use local path since the file exists in the public folder of the workspace
+  const logoSrc = '/AmitimLogo.png';
 
   useEffect(() => {
     if (user && isAdmin) {
