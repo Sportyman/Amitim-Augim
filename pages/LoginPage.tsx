@@ -7,6 +7,9 @@ const LoginPage: React.FC = () => {
   const { user, isAdmin, signInWithGoogle, logout } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string>('');
+  
+  // Direct link as requested
+  const logoSrc = 'https://raw.githubusercontent.com/Sportyman/Amitim-Augim/refs/heads/main/public/AmitimLogo.png';
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -50,7 +53,7 @@ const LoginPage: React.FC = () => {
         <div className="mb-8 flex justify-center">
              <Link to="/">
                 <img 
-                  src="/AmitimLogo.png" 
+                  src={logoSrc}
                   alt="עמיתים" 
                   className="h-40 w-auto hover:opacity-90 transition-opacity object-contain" 
                 />
