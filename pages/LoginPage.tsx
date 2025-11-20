@@ -48,7 +48,7 @@ const LoginPage: React.FC = () => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
         <div className="mb-6 flex justify-center">
              <Link to="/">
-                <img src="https://i.imgur.com/oOqtYCK.jpeg" alt="עמיתים" className="h-16 w-auto hover:opacity-80 transition-opacity" />
+                <img src="https://i.imgur.com/oOqtYCK.jpeg" alt="עמיתים" className="h-24 w-auto hover:opacity-80 transition-opacity" />
              </Link>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">כניסת מנהלים</h2>

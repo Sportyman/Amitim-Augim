@@ -7,7 +7,7 @@ const Header: React.FC = () => {
   return (
     <header className="bg-white shadow-sm sticky top-0 z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20"> 
+        <div className="flex items-center justify-between h-24"> 
           {/* Empty div to balance flex layout if needed, or put login link here */}
           <div className="w-12">
              <Link to="/login" className="text-xs text-gray-300 hover:text-gray-500 transition-colors">
@@ -21,7 +21,7 @@ const Header: React.FC = () => {
                 <img 
                   src="https://i.imgur.com/oOqtYCK.jpeg" 
                   alt="עמיתים" 
-                  className="h-16 w-auto object-contain"
+                  className="h-20 w-auto object-contain"
                   onError={() => setImageError(true)}
                 />
               ) : (
