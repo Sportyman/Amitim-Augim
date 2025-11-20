@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,10 +7,6 @@ const LoginPage: React.FC = () => {
   const { user, isAdmin, signInWithGoogle, logout } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string>('');
-
-  // Logo sources
-  const localLogo = "/AmitimLogo.png";
-  const remoteLogo = "https://raw.githubusercontent.com/Sportyman/Amitim-Augim/refs/heads/main/public/AmitimLogo.png";
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -53,15 +50,9 @@ const LoginPage: React.FC = () => {
         <div className="mb-8 flex justify-center">
              <Link to="/">
                 <img 
-                  src={localLogo} 
+                  src="/AmitimLogo.png" 
                   alt="עמיתים" 
                   className="h-40 w-auto hover:opacity-90 transition-opacity object-contain" 
-                  onError={(e) => {
-                      const target = e.currentTarget;
-                      if (target.src.includes(localLogo)) {
-                          target.src = remoteLogo;
-                      }
-                  }}
                 />
              </Link>
         </div>
