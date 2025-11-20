@@ -369,7 +369,11 @@ const AdminDashboard: React.FC = () => {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center">
                                             <div className="font-medium text-gray-900">{activity.title}</div>
-                                            {activity.ai_summary && <CheckCircle className="w-3 h-3 text-green-500 mr-2" title="קיים סיכום AI" />}
+                                            {activity.ai_summary && (
+                                              <span title="קיים סיכום AI">
+                                                <CheckCircle className="w-3 h-3 text-green-500 mr-2" />
+                                              </span>
+                                            )}
                                         </div>
                                         <div className="text-xs text-gray-400 md:hidden mt-1">{activity.category} | {activity.price}₪</div>
                                     </td>
