@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, where } from 'firebase/firestore';
 import { Activity } from '../types';
 
 const COLLECTION_NAME = 'activities';
@@ -62,7 +62,7 @@ export const dbService = {
     const batch = writeBatch(db);
     const collectionRef = collection(db, COLLECTION_NAME);
 
-    // Process in chunks of 500 (Firestore batch limit)
+    // Process in chunks of 400 (Firestore batch limit is 500)
     const chunks = [];
     for (let i = 0; i < activities.length; i += 400) {
         chunks.push(activities.slice(i, i + 400));
@@ -83,15 +83,52 @@ export const dbService = {
         await chunkBatch.commit();
     }
   },
+
+  // Update Batch (For Bulk Image/Category updates)
+  updateActivitiesBatch: async (activityIds: string[], updates: Partial<Activity>) => {
+      const batch = writeBatch(db);
+      
+      // Process in chunks of 400
+      const chunkedIds = [];
+      for (let i = 0; i < activityIds.length; i += 400) {
+          chunkedIds.push(activityIds.slice(i, i + 400));
+      }
+
+      for (const chunk of chunkedIds) {
+          const chunkBatch = writeBatch(db);
+          chunk.forEach((id) => {
+              const docRef = doc(db, COLLECTION_NAME, id);
+              chunkBatch.update(docRef, updates);
+          });
+          await chunkBatch.commit();
+      }
+  },
   
   // Delete All (Use with caution - for resetting DB)
   deleteAllActivities: async () => {
      const q = query(collection(db, COLLECTION_NAME));
      const snapshot = await getDocs(q);
      const batch = writeBatch(db);
-     snapshot.docs.forEach((doc) => {
-         batch.delete(doc.ref);
-     });
-     await batch.commit();
+     
+     // Handle large deletions in chunks if necessary, but strictly speaking batch limit applies to writes.
+     // For huge collections, this should be recursive, but for <500 items simple batch is fine.
+     // If >500, we need multiple batches.
+     let operationCounter = 0;
+     let currentBatch = writeBatch(db);
+
+     for (const doc of snapshot.docs) {
+         currentBatch.delete(doc.ref);
+         operationCounter++;
+
+         if (operationCounter >= 400) {
+             await currentBatch.commit();
+             currentBatch = writeBatch(db);
+             operationCounter = 0;
+         }
+     }
+     
+     if (operationCounter > 0) {
+         await currentBatch.commit();
+     }
   }
 };
