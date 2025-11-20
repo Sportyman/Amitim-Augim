@@ -6,9 +6,9 @@ import { Activity, AdminUser, UserRole } from '../types';
 import AdminActivityForm from '../components/AdminActivityForm';
 import { 
     Plus, Edit, Trash2, LogOut, Database, Upload, Download,
-    Search, Filter, FileJson, AlertTriangle, CheckCircle,
-    BarChart3, Layers, MapPin, Menu, X, Image as ImageIcon, 
-    Save, RefreshCw, Clock, LayoutGrid, List, Users, Shield
+    Search, RefreshCw, LayoutGrid, List, Users,
+    Menu, X, Image as ImageIcon, ChevronDown, ChevronUp,
+    Home, ArrowRight // Changed ArrowLeft to ArrowRight for RTL context
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 
@@ -338,6 +338,7 @@ const AdminDashboard: React.FC = () => {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users'>('list');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedActivityId, setExpandedActivityId] = useState<string | number | null>(null);
   
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
@@ -499,6 +500,10 @@ const AdminDashboard: React.FC = () => {
       }
   }
 
+  const toggleRowExpansion = (id: string | number) => {
+      setExpandedActivityId(prevId => prevId === id ? null : id);
+  };
+
   // Filtering & Stats
   const filteredActivities = activities.filter(a => {
     const matchesSearch = a.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -510,7 +515,6 @@ const AdminDashboard: React.FC = () => {
   });
 
   const availableLocations = [...new Set(activities.map(a => a.location.split(',')[0].trim()))].sort();
-  const uniqueLocationsCount = new Set(activities.map(a => a.location.split(',')[0].trim())).size;
 
   const getRoleLabel = (role: UserRole | null) => {
       switch(role) {
@@ -615,6 +619,24 @@ const AdminDashboard: React.FC = () => {
       <main className="flex-1 overflow-y-auto h-screen">
         <div className="p-4 sm:p-8 max-w-7xl mx-auto">
             
+             {/* Navigation Buttons */}
+            <div className="flex justify-end gap-3 mb-6">
+                <button 
+                    onClick={() => navigate(-1)} 
+                    className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-full shadow-sm hover:bg-gray-50 transition-all text-sm font-medium border border-gray-200"
+                >
+                    <ArrowRight className="w-4 h-4" />
+                    חזרה לעמוד קודם
+                </button>
+                <button 
+                    onClick={() => navigate('/')} 
+                    className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-full shadow-sm hover:bg-orange-700 transition-all text-sm font-medium"
+                >
+                    <Home className="w-4 h-4" />
+                    חזרה לאפליקציה
+                </button>
+            </div>
+
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div>
@@ -711,99 +733,161 @@ const AdminDashboard: React.FC = () => {
 
                     {/* Content: Mobile Cards & Desktop Table */}
                     <div className="space-y-4">
-                        {/* Mobile Cards View */}
+                        {/* Mobile Cards View (Simplified) */}
                         <div className="grid grid-cols-1 gap-4 md:hidden">
                             {filteredActivities.map(activity => (
-                                <div key={activity.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4">
-                                    <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                                        {activity.imageUrl ? (
-                                            <img src={activity.imageUrl} alt="" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                <ImageIcon className="w-8 h-8" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start">
-                                            <h3 className="font-bold text-gray-900 truncate">{activity.title}</h3>
-                                            <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
-                                                {activity.category}
-                                            </span>
+                                <div key={activity.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
+                                    <div className="flex gap-4" onClick={() => toggleRowExpansion(activity.id)}>
+                                        <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                                            {activity.imageUrl ? (
+                                                <img src={activity.imageUrl} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                    <ImageIcon className="w-8 h-8" />
+                                                </div>
+                                            )}
                                         </div>
-                                        <p className="text-sm text-gray-500 mt-1 truncate">{activity.location}</p>
-                                        <div className="flex items-center justify-between mt-3">
-                                            <span className="font-bold text-green-600">{activity.price} ₪</span>
-                                            <div className="flex gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start">
+                                                <h3 className="font-bold text-gray-900 truncate">{activity.title}</h3>
+                                                <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                    {activity.category}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-500 mt-1 truncate">{activity.location}</p>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <span className="font-bold text-green-600">{activity.price} ₪</span>
+                                                 {expandedActivityId === activity.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {expandedActivityId === activity.id && (
+                                        <div className="pt-4 border-t border-gray-100 mt-2">
+                                            <p className="text-sm text-gray-600 mb-3">{activity.description}</p>
+                                            <div className="flex gap-2 justify-end">
                                                 {canEdit(userRole) && (
-                                                    <button onClick={() => handleEdit(activity)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-                                                        <Edit className="w-4 h-4" />
+                                                    <button onClick={() => handleEdit(activity)} className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium">
+                                                        <Edit className="w-4 h-4" /> ערוך
                                                     </button>
                                                 )}
                                                 {canDelete(userRole) && (
-                                                    <button onClick={() => handleDelete(activity.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg">
-                                                        <Trash2 className="w-4 h-4" />
+                                                    <button onClick={() => handleDelete(activity.id)} className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium">
+                                                        <Trash2 className="w-4 h-4" /> מחק
                                                     </button>
                                                 )}
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
 
-                        {/* Desktop Table View */}
+                        {/* Desktop Table View (Expandable) */}
                         <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                     <tr>
+                                        <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase w-10"></th>
                                         <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">פעילות</th>
                                         <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">קטגוריה</th>
                                         <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">מיקום</th>
                                         <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">מחיר</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">פעולות</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">סטטוס</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {filteredActivities.map(activity => (
-                                        <tr key={activity.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden mr-3">
-                                                        {activity.imageUrl && <img className="h-10 w-10 object-cover" src={activity.imageUrl} alt="" />}
+                                        <React.Fragment key={activity.id}>
+                                            <tr 
+                                                onClick={() => toggleRowExpansion(activity.id)} 
+                                                className={`cursor-pointer transition-colors ${expandedActivityId === activity.id ? 'bg-orange-50' : 'hover:bg-gray-50'}`}
+                                            >
+                                                <td className="px-6 py-4 text-gray-400">
+                                                    {expandedActivityId === activity.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden mr-3">
+                                                            {activity.imageUrl ? (
+                                                                <img className="h-10 w-10 object-cover" src={activity.imageUrl} alt="" />
+                                                            ) : (
+                                                                <div className="flex items-center justify-center h-full w-full text-gray-400"><ImageIcon className="w-5 h-5"/></div>
+                                                            )}
+                                                        </div>
+                                                        <div className="mr-4">
+                                                            <div className="text-sm font-medium text-gray-900">{activity.title}</div>
+                                                            <div className="text-xs text-gray-500">{activity.ageGroup}</div>
+                                                        </div>
                                                     </div>
-                                                    <div className="mr-4">
-                                                        <div className="text-sm font-medium text-gray-900">{activity.title}</div>
-                                                        <div className="text-xs text-gray-500">{activity.ageGroup}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="inline-flex px-2.5 py-0.5 text-xs font-medium text-orange-800 bg-orange-100 rounded-full">
-                                                    {activity.category}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {activity.location}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">
-                                                ₪{activity.price}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {canEdit(userRole) && (
-                                                        <button onClick={() => handleEdit(activity)} className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded">
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                    {canDelete(userRole) && (
-                                                        <button onClick={() => handleDelete(activity.id)} className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="inline-flex px-2.5 py-0.5 text-xs font-medium text-orange-800 bg-orange-100 rounded-full">
+                                                        {activity.category}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {activity.location}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">
+                                                    ₪{activity.price}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-left">
+                                                    <span className="text-xs text-gray-400">פעיל</span>
+                                                </td>
+                                            </tr>
+                                            {/* Expanded Details Row */}
+                                            {expandedActivityId === activity.id && (
+                                                <tr className="bg-gray-50 animate-in fade-in duration-200">
+                                                    <td colSpan={6} className="px-6 py-4">
+                                                        <div className="flex gap-6">
+                                                            {/* Large Image */}
+                                                            <div className="w-48 h-32 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
+                                                                 {activity.imageUrl ? (
+                                                                    <img src={activity.imageUrl} alt="" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="flex items-center justify-center h-full w-full text-gray-400"><ImageIcon className="w-8 h-8"/></div>
+                                                                )}
+                                                            </div>
+                                                            
+                                                            {/* Text Details */}
+                                                            <div className="flex-1">
+                                                                <h4 className="text-sm font-bold text-gray-700 mb-2">תיאור מלא:</h4>
+                                                                <p className="text-sm text-gray-600 mb-4 leading-relaxed max-w-2xl">
+                                                                    {activity.description || "אין תיאור זמין."}
+                                                                </p>
+                                                                
+                                                                <div className="flex flex-wrap gap-2 mb-4">
+                                                                     {activity.ai_tags?.map((tag, i) => (
+                                                                         <span key={i} className="px-2 py-1 bg-white border border-gray-200 rounded-md text-xs text-gray-500">#{tag}</span>
+                                                                     ))}
+                                                                </div>
+
+                                                                <div className="flex gap-3">
+                                                                    {canEdit(userRole) && (
+                                                                        <button onClick={() => handleEdit(activity)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors">
+                                                                            <Edit className="w-4 h-4" /> ערוך פרטים
+                                                                        </button>
+                                                                    )}
+                                                                    {canDelete(userRole) && (
+                                                                        <button onClick={() => handleDelete(activity.id)} className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors">
+                                                                            <Trash2 className="w-4 h-4" /> מחק
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* Extra Info Column */}
+                                                            <div className="w-48 text-sm text-gray-600 border-r border-gray-200 pr-6 space-y-2">
+                                                                <div><span className="font-semibold">מדריך:</span> {activity.instructor || '-'}</div>
+                                                                <div><span className="font-semibold">לו"ז:</span> {activity.schedule}</div>
+                                                                <div><span className="font-semibold">מזהה:</span> {activity.id}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     ))}
                                 </tbody>
                             </table>
@@ -812,44 +896,6 @@ const AdminDashboard: React.FC = () => {
                 </>
             )}
             
-            {/* Footer Stats (Desktop) */}
-            {currentView !== 'users' && (
-                <div className="mt-8 hidden md:grid grid-cols-3 gap-4">
-                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="bg-blue-50 p-3 rounded-full text-blue-600"><Layers className="w-5 h-5"/></div>
-                        <div>
-                            <p className="text-xs text-gray-500">סה"כ חוגים</p>
-                            <p className="text-lg font-bold text-gray-800">{activities.length}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="bg-purple-50 p-3 rounded-full text-purple-600"><MapPin className="w-5 h-5"/></div>
-                        <div>
-                            <p className="text-xs text-gray-500">מרכזים פעילים</p>
-                            <p className="text-lg font-bold text-gray-800">{uniqueLocationsCount}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="bg-green-50 p-3 rounded-full text-green-600"><BarChart3 className="w-5 h-5"/></div>
-                        <div>
-                            <p className="text-xs text-gray-500">מחיר ממוצע</p>
-                            <p className="text-lg font-bold text-gray-800">
-                                ₪{activities.length > 0 ? Math.round(activities.reduce((acc, curr) => acc + curr.price, 0) / activities.length) : 0}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Danger Zone Footer */}
-            {activities.length > 0 && userRole === 'super_admin' && currentView !== 'users' && (
-                <div className="mt-12 pt-8 border-t border-gray-200">
-                    <button onClick={handleDeleteAll} className="text-xs text-red-400 hover:text-red-600 underline">
-                        מחיקת כל הנתונים (למפתחים בלבד)
-                    </button>
-                </div>
-            )}
-
         </div>
       </main>
 
