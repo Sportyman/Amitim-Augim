@@ -491,15 +491,6 @@ const AdminDashboard: React.FC = () => {
       URL.revokeObjectURL(url);
   };
 
-  const handleDeleteAll = async () => {
-      if (userRole !== 'super_admin') return;
-      if (prompt('כדי למחוק הכל הקלד "מחק הכל"') === "מחק הכל") {
-          setIsLoading(true);
-          await dbService.deleteAllActivities();
-          await fetchActivities();
-      }
-  }
-
   const toggleRowExpansion = (id: string | number) => {
       setExpandedActivityId(prevId => prevId === id ? null : id);
   };
@@ -903,8 +894,10 @@ const AdminDashboard: React.FC = () => {
       {isFormOpen && (
         <AdminActivityForm 
             initialData={editingActivity} 
+            allActivities={activities}
             onSubmit={handleFormSubmit} 
             onCancel={() => setIsFormOpen(false)} 
+            onRefresh={fetchActivities}
         />
       )}
     </div>

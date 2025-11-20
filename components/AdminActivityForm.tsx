@@ -1,15 +1,149 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Activity } from '../types';
 import { CATEGORIES } from '../constants';
 import ActivityCard from './ActivityCard';
+import { Images, Check, X, AlertCircle } from 'lucide-react';
+import { dbService } from '../services/dbService';
 
 interface AdminActivityFormProps {
   initialData?: Activity | null;
+  allActivities?: Activity[]; // Pass full list for bulk ops
   onSubmit: (data: Omit<Activity, 'id'>) => Promise<void>;
   onCancel: () => void;
+  onRefresh?: () => void;
 }
 
-const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, onSubmit, onCancel }) => {
+// --- Bulk Image Update Modal ---
+const BulkImageModal: React.FC<{
+    currentActivity: Omit<Activity, 'id'>;
+    allActivities: Activity[];
+    newImageUrl: string;
+    onClose: () => void;
+    onConfirm: (ids: string[]) => void;
+}> = ({ currentActivity, allActivities, newImageUrl, onClose, onConfirm }) => {
+    const [filters, setFilters] = useState({
+        matchTitle: true,
+        matchCategory: false,
+        matchLocation: false,
+        matchAge: false
+    });
+
+    const matchingActivities = useMemo(() => {
+        if (!newImageUrl) return [];
+        
+        return allActivities.filter(a => {
+            let matches = true;
+            
+            // Basic logic: partial title match
+            if (filters.matchTitle) {
+                // Normalize strings for comparison
+                const t1 = currentActivity.title.toLowerCase().trim();
+                const t2 = a.title.toLowerCase().trim();
+                // Check if one contains the other or they share a significant common word
+                if (!t2.includes(t1) && !t1.includes(t2)) matches = false;
+            }
+
+            if (filters.matchCategory && a.category !== currentActivity.category) matches = false;
+            
+            // Location match: simplistic check (e.g., "Matnas Yavor" vs "Matnas Yavor, Hertzliya")
+            if (filters.matchLocation) {
+                 const loc1 = currentActivity.location.split(',')[0].trim();
+                 const loc2 = a.location.split(',')[0].trim();
+                 if (loc1 !== loc2) matches = false;
+            }
+
+            if (filters.matchAge && a.ageGroup !== currentActivity.ageGroup) matches = false;
+
+            return matches;
+        });
+    }, [allActivities, currentActivity, filters, newImageUrl]);
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" dir="rtl">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="bg-indigo-600 p-4 flex justify-between items-center text-white">
+                    <div className="flex items-center gap-2">
+                        <Images className="w-5 h-5" />
+                        <h3 className="font-bold">החלת תמונה על חוגים נוספים</h3>
+                    </div>
+                    <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                
+                <div className="p-6">
+                    <p className="text-gray-600 text-sm mb-4">
+                        בחר את המאפיינים המשותפים כדי לעדכן את התמונה החדשה גם בחוגים אחרים:
+                    </p>
+                    
+                    <div className="space-y-3 mb-6">
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={filters.matchTitle} 
+                                onChange={e => setFilters(p => ({...p, matchTitle: e.target.checked}))}
+                                className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                            <span className="text-sm text-gray-700">בעלי שם דומה ל-<strong>"{currentActivity.title}"</strong></span>
+                        </label>
+                        
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={filters.matchCategory} 
+                                onChange={e => setFilters(p => ({...p, matchCategory: e.target.checked}))}
+                                className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                            <span className="text-sm text-gray-700">באותה קטגוריה: <strong>{currentActivity.category}</strong></span>
+                        </label>
+
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={filters.matchLocation} 
+                                onChange={e => setFilters(p => ({...p, matchLocation: e.target.checked}))}
+                                className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                            <span className="text-sm text-gray-700">באותו מיקום: <strong>{currentActivity.location.split(',')[0]}</strong></span>
+                        </label>
+
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={filters.matchAge} 
+                                onChange={e => setFilters(p => ({...p, matchAge: e.target.checked}))}
+                                className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                            <span className="text-sm text-gray-700">לאותו גיל: <strong>{currentActivity.ageGroup}</strong></span>
+                        </label>
+                    </div>
+
+                    <div className="bg-indigo-50 p-3 rounded-lg flex items-center gap-2 text-indigo-800 text-sm font-medium mb-6">
+                        <AlertCircle className="w-4 h-4" />
+                        נמצאו {matchingActivities.length} חוגים שיתעדכנו.
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => onConfirm(matchingActivities.map(a => String(a.id)))}
+                            disabled={matchingActivities.length === 0}
+                            className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                        >
+                            <Check className="w-4 h-4" />
+                            עדכן לכולם
+                        </button>
+                        <button onClick={onClose} className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50">
+                            ביטול
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allActivities = [], onSubmit, onCancel, onRefresh }) => {
   const [formData, setFormData] = useState<Omit<Activity, 'id'>>({
     title: '',
     category: 'ספורט',
@@ -25,6 +159,7 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, onSu
     ai_tags: []
   });
   const [loading, setLoading] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -51,6 +186,25 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, onSu
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBulkConfirm = async (ids: string[]) => {
+      if (!ids.length) return;
+      setShowBulkModal(false);
+      
+      if (confirm(`פעולה זו תעדכן את התמונה עבור ${ids.length} חוגים. להמשיך?`)) {
+          setLoading(true);
+          try {
+              await dbService.updateActivitiesBatch(ids, { imageUrl: formData.imageUrl });
+              alert('התמונות עודכנו בהצלחה!');
+              if (onRefresh) onRefresh();
+          } catch (e) {
+              console.error(e);
+              alert('שגיאה בעדכון קבוצתי');
+          } finally {
+              setLoading(false);
+          }
+      }
   };
 
   // Create a mock activity object for preview
@@ -117,7 +271,20 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, onSu
 
                         <div className="col-span-1 md:col-span-2">
                             <label className="block text-sm font-bold text-gray-700 mb-1">קישור לתמונה</label>
-                            <input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none text-left dir-ltr" placeholder="https://..." dir="ltr" />
+                            <div className="flex gap-2">
+                                <input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none text-left dir-ltr" placeholder="https://..." dir="ltr" />
+                                {formData.imageUrl && (
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowBulkModal(true)}
+                                        className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 rounded-lg border border-indigo-200 transition-colors flex items-center gap-2 whitespace-nowrap text-sm font-semibold"
+                                        title="החל תמונה זו על חוגים דומים"
+                                    >
+                                        <Images className="w-4 h-4" />
+                                        החל על נוספים
+                                    </button>
+                                )}
+                            </div>
                             <p className="text-xs text-gray-400 mt-1">מומלץ להשתמש בקישור ישיר לתמונה איכותית.</p>
                         </div>
 
@@ -171,6 +338,17 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, onSu
             </button>
         </div>
       </div>
+
+      {/* Bulk Modal Overlay */}
+      {showBulkModal && (
+          <BulkImageModal 
+              currentActivity={formData}
+              allActivities={allActivities}
+              newImageUrl={formData.imageUrl}
+              onClose={() => setShowBulkModal(false)}
+              onConfirm={handleBulkConfirm}
+          />
+      )}
     </div>
   );
 };
