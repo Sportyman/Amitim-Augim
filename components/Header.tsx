@@ -19,7 +19,7 @@ const Header: React.FC = () => {
             <Link to="/" className="flex items-center justify-center">
               {!imageError ? (
                 <img 
-                  src="/logo.png" 
+                  src="https://i.imgur.com/oOqtYCK.jpeg" 
                   alt="עמיתים" 
                   className="h-16 w-auto object-contain"
                   onError={() => setImageError(true)}
