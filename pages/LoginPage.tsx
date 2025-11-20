@@ -8,16 +8,8 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string>('');
   
-  // Logic to ensure logo always displays
-  const [logoSrc, setLogoSrc] = useState('/AmitimLogo.png');
-
-  const handleImageError = () => {
-    if (logoSrc === '/AmitimLogo.png') {
-        setLogoSrc('https://raw.githubusercontent.com/Sportyman/Amitim-Augim/main/public/AmitimLogo.png');
-    } else if (logoSrc.includes('githubusercontent')) {
-        setLogoSrc('https://i.imgur.com/oOqtYCK.jpeg');
-    }
-  };
+  // Using the stable Imgur URL provided by the user
+  const logoSrc = 'https://i.imgur.com/yEav0G8.png';
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -62,7 +54,6 @@ const LoginPage: React.FC = () => {
              <Link to="/">
                 <img 
                   src={logoSrc}
-                  onError={handleImageError}
                   alt="עמיתים" 
                   className="h-40 w-auto hover:opacity-90 transition-opacity object-contain" 
                 />
