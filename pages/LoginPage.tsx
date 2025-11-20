@@ -7,6 +7,10 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string>('');
 
+  // Logo sources
+  const localLogo = "/AmitimLogo.png";
+  const remoteLogo = "https://raw.githubusercontent.com/Sportyman/Amitim-Augim/refs/heads/main/public/AmitimLogo.png";
+
   useEffect(() => {
     if (user && isAdmin) {
       navigate('/admin');
@@ -48,7 +52,17 @@ const LoginPage: React.FC = () => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
         <div className="mb-8 flex justify-center">
              <Link to="/">
-                <img src="https://i.imgur.com/oOqtYCK.jpeg" alt="עמיתים" className="h-40 w-auto hover:opacity-90 transition-opacity" />
+                <img 
+                  src={localLogo} 
+                  alt="עמיתים" 
+                  className="h-40 w-auto hover:opacity-90 transition-opacity object-contain" 
+                  onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src.includes(localLogo)) {
+                          target.src = remoteLogo;
+                      }
+                  }}
+                />
              </Link>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">כניסת מנהלים</h2>
