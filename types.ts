@@ -24,3 +24,12 @@ export interface Activity {
 }
 
 export type ViewMode = 'grid' | 'list';
+
+// --- RBAC Types ---
+export type UserRole = 'super_admin' | 'admin' | 'editor';
+
+export interface AdminUser {
+  email: string;
+  role: UserRole;
+  addedAt: any;
+}

@@ -1,12 +1,14 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, googleProvider } from '../services/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { dbService } from '../services/dbService';
+import { UserRole } from '../types';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  isAdmin: boolean;
+  isAdmin: boolean; // True if role is not null
+  userRole: UserRole | null;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -19,7 +21,7 @@ export const useAuth = () => {
   return context;
 };
 
-const getAdminEmail = () => {
+const getMasterAdminEmail = () => {
   try {
     return (typeof process !== 'undefined' && process.env && process.env.ADMIN_EMAIL) 
       ? process.env.ADMIN_EMAIL 
@@ -32,40 +34,47 @@ const getAdminEmail = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
 
-  const adminEmail = getAdminEmail();
+  const masterEmail = getMasterAdminEmail();
 
   useEffect(() => {
     let mounted = true;
 
-    // Setup Firebase listener
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!mounted) return;
       
       setUser(currentUser);
-      if (currentUser && currentUser.email === adminEmail) {
-        setIsAdmin(true);
+      
+      if (currentUser && currentUser.email) {
+          // 1. Check if Master Admin (Environment Variable) - Always Super Admin
+          if (currentUser.email === masterEmail) {
+              setUserRole('super_admin');
+          } else {
+              // 2. Check Firestore for other roles
+              const role = await dbService.getUserRole(currentUser.email);
+              setUserRole(role);
+          }
       } else {
-        setIsAdmin(false);
+          setUserRole(null);
       }
       setLoading(false);
     });
 
-    // Failsafe: If Firebase doesn't respond within 2 seconds, allow app to load (as guest)
+    // Failsafe
     const failsafeTimeout = setTimeout(() => {
       if (mounted && loading) {
-        console.warn("Auth check timed out, allowing render as guest.");
+        console.warn("Auth check timed out.");
         setLoading(false);
       }
-    }, 2000);
+    }, 4000); // Increased timeout slightly for DB fetch
 
     return () => {
       mounted = false;
       unsubscribe();
       clearTimeout(failsafeTimeout);
     };
-  }, [adminEmail, loading]); // Added loading dependency to silence linter if needed, though logic is fine.
+  }, [masterEmail]); 
 
   const signInWithGoogle = async () => {
     try {
@@ -79,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await signOut(auth);
+      setUserRole(null);
     } catch (error) {
       console.error("Error signing out", error);
     }
@@ -96,7 +106,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ 
+        user, 
+        loading, 
+        isAdmin: !!userRole, 
+        userRole,
+        signInWithGoogle, 
+        logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,11 +1,13 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, where } from 'firebase/firestore';
-import { Activity } from '../types';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc } from 'firebase/firestore';
+import { Activity, AdminUser, UserRole } from '../types';
 
 const COLLECTION_NAME = 'activities';
+const USERS_COLLECTION = 'users';
 
 export const dbService = {
-  // Get all activities
+  // --- Activity Management ---
+  
   getAllActivities: async (): Promise<Activity[]> => {
     try {
       const q = query(collection(db, COLLECTION_NAME)); 
@@ -20,7 +22,6 @@ export const dbService = {
     }
   },
 
-  // Add new activity
   addActivity: async (activity: Omit<Activity, 'id'>) => {
     try {
       const docRef = await addDoc(collection(db, COLLECTION_NAME), {
@@ -34,11 +35,9 @@ export const dbService = {
     }
   },
 
-  // Update activity
   updateActivity: async (id: string, updates: Partial<Activity>) => {
     try {
       const activityRef = doc(db, COLLECTION_NAME, id);
-      // Remove id from updates if present to avoid redundancy and type conflicts
       const { id: _, ...dataToUpdate } = updates as any;
       await updateDoc(activityRef, dataToUpdate);
     } catch (error) {
@@ -47,7 +46,6 @@ export const dbService = {
     }
   },
 
-  // Delete activity
   deleteActivity: async (id: string) => {
     try {
       await deleteDoc(doc(db, COLLECTION_NAME, id));
@@ -57,12 +55,10 @@ export const dbService = {
     }
   },
 
-  // Bulk Import (Migration Tool) - Optimized with Batch
   importActivities: async (activities: Activity[]) => {
     const batch = writeBatch(db);
     const collectionRef = collection(db, COLLECTION_NAME);
 
-    // Process in chunks of 400 (Firestore batch limit is 500)
     const chunks = [];
     for (let i = 0; i < activities.length; i += 400) {
         chunks.push(activities.slice(i, i + 400));
@@ -71,8 +67,6 @@ export const dbService = {
     for (const chunk of chunks) {
         const chunkBatch = writeBatch(db);
         chunk.forEach((activity) => {
-            // IMPORTANT: Remove the old numeric ID and let Firestore generate a new string ID
-            // This prevents conflicts and ensures consistency.
             const { id, ...data } = activity;
             const newDocRef = doc(collectionRef);
             chunkBatch.set(newDocRef, {
@@ -84,11 +78,8 @@ export const dbService = {
     }
   },
 
-  // Update Batch (For Bulk Image/Category updates)
   updateActivitiesBatch: async (activityIds: string[], updates: Partial<Activity>) => {
       const batch = writeBatch(db);
-      
-      // Process in chunks of 400
       const chunkedIds = [];
       for (let i = 0; i < activityIds.length; i += 400) {
           chunkedIds.push(activityIds.slice(i, i + 400));
@@ -104,15 +95,9 @@ export const dbService = {
       }
   },
   
-  // Delete All (Use with caution - for resetting DB)
   deleteAllActivities: async () => {
      const q = query(collection(db, COLLECTION_NAME));
      const snapshot = await getDocs(q);
-     const batch = writeBatch(db);
-     
-     // Handle large deletions in chunks if necessary, but strictly speaking batch limit applies to writes.
-     // For huge collections, this should be recursive, but for <500 items simple batch is fine.
-     // If >500, we need multiple batches.
      let operationCounter = 0;
      let currentBatch = writeBatch(db);
 
@@ -126,9 +111,56 @@ export const dbService = {
              operationCounter = 0;
          }
      }
-     
      if (operationCounter > 0) {
          await currentBatch.commit();
      }
+  },
+
+  // --- User/Role Management ---
+
+  getUserRole: async (email: string): Promise<UserRole | null> => {
+    try {
+        const docRef = doc(db, USERS_COLLECTION, email);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data().role as UserRole;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching user role:", error);
+        return null;
+    }
+  },
+
+  getAllAdmins: async (): Promise<AdminUser[]> => {
+      try {
+          const q = query(collection(db, USERS_COLLECTION));
+          const snapshot = await getDocs(q);
+          return snapshot.docs.map(d => ({ email: d.id, ...d.data() } as AdminUser));
+      } catch (error) {
+          console.error("Error fetching admins:", error);
+          return [];
+      }
+  },
+
+  addAdminUser: async (email: string, role: UserRole) => {
+      try {
+          await setDoc(doc(db, USERS_COLLECTION, email), {
+              role,
+              addedAt: new Date()
+          });
+      } catch (error) {
+          console.error("Error adding admin:", error);
+          throw error;
+      }
+  },
+
+  removeAdminUser: async (email: string) => {
+      try {
+          await deleteDoc(doc(db, USERS_COLLECTION, email));
+      } catch (error) {
+          console.error("Error removing admin:", error);
+          throw error;
+      }
   }
 };

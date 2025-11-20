@@ -2,13 +2,13 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../services/dbService';
-import { Activity } from '../types';
+import { Activity, AdminUser, UserRole } from '../types';
 import AdminActivityForm from '../components/AdminActivityForm';
 import { 
-    Plus, Edit, Trash2, LogOut, Database, Upload, 
+    Plus, Edit, Trash2, LogOut, Database, Upload, Download,
     Search, Filter, FileJson, AlertTriangle, CheckCircle,
     BarChart3, Layers, MapPin, Menu, X, Image as ImageIcon, 
-    Save, RefreshCw, Clock, LayoutGrid, List
+    Save, RefreshCw, Clock, LayoutGrid, List, Users, Shield
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 
@@ -23,7 +23,6 @@ const useAutoLogout = (logout: () => void) => {
     }, []);
 
     useEffect(() => {
-        // Listeners for activity
         window.addEventListener('mousemove', handleActivity);
         window.addEventListener('keypress', handleActivity);
         window.addEventListener('click', handleActivity);
@@ -34,7 +33,7 @@ const useAutoLogout = (logout: () => void) => {
                 console.warn("Session timed out due to inactivity.");
                 logout();
             }
-        }, 10000); // Check every 10 seconds
+        }, 10000);
 
         return () => {
             window.removeEventListener('mousemove', handleActivity);
@@ -45,6 +44,12 @@ const useAutoLogout = (logout: () => void) => {
         };
     }, [lastActivity, logout, handleActivity]);
 };
+
+// --- Helper: Permissions ---
+const canEdit = (role: UserRole | null) => ['super_admin', 'admin', 'editor'].includes(role || '');
+const canDelete = (role: UserRole | null) => ['super_admin', 'admin'].includes(role || '');
+const canCreate = (role: UserRole | null) => ['super_admin', 'admin'].includes(role || '');
+const canManageUsers = (role: UserRole | null) => role === 'super_admin';
 
 // --- Sub-Component: Bulk Update Tool ---
 const BulkUpdateTool: React.FC<{ 
@@ -180,16 +185,158 @@ const BulkUpdateTool: React.FC<{
     );
 };
 
+// --- Sub-Component: User Management ---
+const UserManagement: React.FC = () => {
+    const [admins, setAdmins] = useState<AdminUser[]>([]);
+    const [newEmail, setNewEmail] = useState('');
+    const [newRole, setNewRole] = useState<UserRole>('editor');
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        fetchAdmins();
+    }, []);
+
+    const fetchAdmins = async () => {
+        const data = await dbService.getAllAdmins();
+        setAdmins(data);
+    };
+
+    const handleAddUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newEmail) return;
+        setLoading(true);
+        try {
+            await dbService.addAdminUser(newEmail, newRole);
+            setNewEmail('');
+            await fetchAdmins();
+            alert('המשתמש נוסף בהצלחה!');
+        } catch (error) {
+            alert('שגיאה בהוספת משתמש');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRemoveUser = async (email: string) => {
+        if (window.confirm(`האם למחוק את הגישה למשתמש ${email}?`)) {
+            try {
+                await dbService.removeAdminUser(email);
+                setAdmins(prev => prev.filter(a => a.email !== email));
+            } catch (error) {
+                alert('שגיאה במחיקה');
+            }
+        }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+                <div className="bg-blue-100 p-2 rounded-lg">
+                    <Users className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-bold text-gray-800">ניהול צוות והרשאות</h3>
+                    <p className="text-sm text-gray-500">הוסף בעלי תפקידים לניהול האפליקציה</p>
+                </div>
+            </div>
+
+            {/* Add User Form */}
+            <form onSubmit={handleAddUser} className="bg-gray-50 p-5 rounded-xl mb-8 border border-gray-200">
+                <h4 className="font-bold text-gray-700 mb-3 text-sm">הוספת מנהל חדש</h4>
+                <div className="flex flex-col md:flex-row gap-3">
+                    <input 
+                        type="email" 
+                        placeholder="כתובת מייל (Gmail)"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        required
+                        className="flex-1 p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <select 
+                        value={newRole}
+                        onChange={(e) => setNewRole(e.target.value as UserRole)}
+                        className="p-2.5 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 outline-none min-w-[150px]"
+                    >
+                        <option value="admin">מנהל (Admin)</option>
+                        <option value="editor">עורך (Editor)</option>
+                    </select>
+                    <button 
+                        type="submit" 
+                        disabled={loading}
+                        className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                        {loading ? 'מוסיף...' : 'הוסף לצוות'}
+                    </button>
+                </div>
+                <div className="mt-3 text-xs text-gray-500 flex flex-col gap-1">
+                   <span className="font-semibold">מקרא הרשאות:</span>
+                   <span>• <b>Admin:</b> שליטה מלאה בתוכן (יצירה, עריכה, מחיקה). ללא גישה לניהול משתמשים.</span>
+                   <span>• <b>Editor:</b> עריכת תוכן קיים בלבד. ללא יכולת מחיקה או יצירה.</span>
+                </div>
+            </form>
+
+            {/* Users List */}
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                    <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                        <tr>
+                            <th className="px-4 py-3">משתמש</th>
+                            <th className="px-4 py-3">תפקיד</th>
+                            <th className="px-4 py-3">תאריך הוספה</th>
+                            <th className="px-4 py-3">פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {admins.map((admin) => (
+                            <tr key={admin.email} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 font-medium text-gray-900">{admin.email}</td>
+                                <td className="px-4 py-3">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                        admin.role === 'admin' ? 'bg-green-100 text-green-800' : 
+                                        admin.role === 'super_admin' ? 'bg-purple-100 text-purple-800' :
+                                        'bg-blue-100 text-blue-800'
+                                    }`}>
+                                        {admin.role === 'super_admin' ? 'מנהל על' : admin.role === 'admin' ? 'מנהל' : 'עורך'}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3 text-gray-500">
+                                    {admin.addedAt?.seconds ? new Date(admin.addedAt.seconds * 1000).toLocaleDateString('he-IL') : '-'}
+                                </td>
+                                <td className="px-4 py-3">
+                                    <button 
+                                        onClick={() => handleRemoveUser(admin.email)}
+                                        className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors"
+                                        title="הסר משתמש"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {admins.length === 0 && (
+                            <tr>
+                                <td colSpan={4} className="text-center py-8 text-gray-500">
+                                    אין מנהלים נוספים כרגע.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
 // --- Main Component ---
 
 const AdminDashboard: React.FC = () => {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, userRole, logout } = useAuth();
   const navigate = useNavigate();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'bulk'>('list');
+  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users'>('list');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Filters & Search
@@ -231,17 +378,29 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleAdd = () => {
+    if (!canCreate(userRole)) {
+        alert('אין לך הרשאה ליצור חוגים חדשים.');
+        return;
+    }
     setEditingActivity(null);
     setIsFormOpen(true);
     setIsMobileMenuOpen(false);
   };
 
   const handleEdit = (activity: Activity) => {
+    if (!canEdit(userRole)) {
+        alert('אין לך הרשאה לערוך חוגים.');
+        return;
+    }
     setEditingActivity(activity);
     setIsFormOpen(true);
   };
 
   const handleDelete = async (id: string | number) => {
+    if (!canDelete(userRole)) {
+        alert('אין לך הרשאה למחוק חוגים.');
+        return;
+    }
     if (window.confirm('האם אתה בטוח שברצונך למחוק פעילות זו? פעולה זו אינה הפיכה.')) {
       try {
         await dbService.deleteActivity(String(id));
@@ -268,6 +427,15 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleInitialMigration = async () => {
+    if (!canCreate(userRole)) return;
+    
+    if (activities.length > 0) {
+        const proceed = window.confirm(
+            'שים לב: כבר קיימים נתונים במערכת. ייבוא מחדש עלול ליצור כפילויות. האם אתה בטוח שברצונך להמשיך?'
+        );
+        if (!proceed) return;
+    }
+
     if (window.confirm('פעולה זו תטען את נתוני הבסיס למסד הנתונים. האם להמשיך?')) {
         setIsLoading(true);
         try {
@@ -285,6 +453,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canCreate(userRole)) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -308,8 +477,21 @@ const AdminDashboard: React.FC = () => {
     };
     reader.readAsText(file);
   };
+  
+  const handleExportData = () => {
+      if (!activities.length) return;
+      const dataStr = JSON.stringify(activities, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `activities_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+  };
 
   const handleDeleteAll = async () => {
+      if (userRole !== 'super_admin') return;
       if (prompt('כדי למחוק הכל הקלד "מחק הכל"') === "מחק הכל") {
           setIsLoading(true);
           await dbService.deleteAllActivities();
@@ -329,6 +511,15 @@ const AdminDashboard: React.FC = () => {
 
   const availableLocations = [...new Set(activities.map(a => a.location.split(',')[0].trim()))].sort();
   const uniqueLocationsCount = new Set(activities.map(a => a.location.split(',')[0].trim())).size;
+
+  const getRoleLabel = (role: UserRole | null) => {
+      switch(role) {
+          case 'super_admin': return 'מנהל על';
+          case 'admin': return 'מנהל';
+          case 'editor': return 'עורך';
+          default: return 'אורח';
+      }
+  };
 
   if (isLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-4">
@@ -374,22 +565,37 @@ const AdminDashboard: React.FC = () => {
                   <List className="w-5 h-5" />
                   רשימת חוגים
               </button>
-              <button 
-                onClick={() => { setCurrentView('bulk'); setIsMobileMenuOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'bulk' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
-              >
-                  <LayoutGrid className="w-5 h-5" />
-                  ניהול קבוצתי
-              </button>
+              
+              {/* Only admins and super admins can do bulk updates */}
+              {canCreate(userRole) && (
+                <button 
+                    onClick={() => { setCurrentView('bulk'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'bulk' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                    <LayoutGrid className="w-5 h-5" />
+                    ניהול קבוצתי
+                </button>
+              )}
+
+              {/* Only Super Admin can manage users */}
+              {canManageUsers(userRole) && (
+                  <button 
+                    onClick={() => { setCurrentView('users'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'users' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                    <Users className="w-5 h-5" />
+                    ניהול צוות
+                </button>
+              )}
           </div>
 
           <div className="absolute bottom-0 w-full p-4 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-3 mb-4 px-2">
-                  <div className="w-8 h-8 rounded-full bg-orange-200 flex items-center justify-center text-orange-700 font-bold text-xs">
-                      AD
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${userRole === 'super_admin' ? 'bg-purple-600' : 'bg-orange-500'}`}>
+                      {user?.email?.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">מנהל מערכת</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{getRoleLabel(userRole)}</p>
                       <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                   </div>
               </div>
@@ -413,27 +619,42 @@ const AdminDashboard: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">
-                        {currentView === 'list' ? 'רשימת החוגים' : 'עריכה וניהול קבוצתי'}
+                        {currentView === 'list' ? 'רשימת החוגים' : currentView === 'bulk' ? 'עריכה וניהול קבוצתי' : 'ניהול צוות'}
                     </h2>
-                    <p className="text-gray-500 text-sm mt-1">
-                        {currentView === 'list' 
-                            ? `מציג ${filteredActivities.length} מתוך ${activities.length} חוגים פעילים`
-                            : 'בצע שינויים גורפים על מספר חוגים במקביל'
-                        }
-                    </p>
+                    {currentView === 'list' && (
+                        <p className="text-gray-500 text-sm mt-1">
+                            מציג {filteredActivities.length} מתוך {activities.length} חוגים פעילים
+                        </p>
+                    )}
                 </div>
-                <button 
-                    onClick={handleAdd} 
-                    className="flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-full hover:bg-orange-600 transition-all shadow-md hover:shadow-lg text-sm font-bold"
-                >
-                    <Plus className="w-5 h-5" />
-                    <span className="hidden sm:inline">חוג חדש</span>
-                    <span className="sm:hidden">הוסף</span>
-                </button>
+                {currentView === 'list' && canCreate(userRole) && (
+                    <div className="flex gap-2">
+                        {/* Backup Button */}
+                        <button 
+                            onClick={handleExportData}
+                            className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-full hover:bg-gray-50 transition-all text-sm font-bold"
+                            title="הורד גיבוי נתונים"
+                        >
+                            <Download className="w-4 h-4" />
+                            <span className="hidden sm:inline">גיבוי</span>
+                        </button>
+
+                        <button 
+                            onClick={handleAdd} 
+                            className="flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-full hover:bg-orange-600 transition-all shadow-md hover:shadow-lg text-sm font-bold"
+                        >
+                            <Plus className="w-5 h-5" />
+                            <span className="hidden sm:inline">חוג חדש</span>
+                            <span className="sm:hidden">הוסף</span>
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Main Views */}
-            {currentView === 'bulk' ? (
+            {currentView === 'users' ? (
+                <UserManagement />
+            ) : currentView === 'bulk' ? (
                 <BulkUpdateTool activities={activities} onUpdate={fetchActivities} />
             ) : (
                 <>
@@ -470,7 +691,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
 
                     {/* Empty State / Migration */}
-                    {activities.length === 0 && !isLoading && (
+                    {activities.length === 0 && !isLoading && canCreate(userRole) && (
                         <div className="bg-white rounded-2xl shadow-sm border border-orange-100 p-8 text-center">
                             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-50 mb-4">
                                 <Database className="w-8 h-8 text-orange-500" />
@@ -514,12 +735,16 @@ const AdminDashboard: React.FC = () => {
                                         <div className="flex items-center justify-between mt-3">
                                             <span className="font-bold text-green-600">{activity.price} ₪</span>
                                             <div className="flex gap-2">
-                                                <button onClick={() => handleEdit(activity)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => handleDelete(activity.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {canEdit(userRole) && (
+                                                    <button onClick={() => handleEdit(activity)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                {canDelete(userRole) && (
+                                                    <button onClick={() => handleDelete(activity.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -566,12 +791,16 @@ const AdminDashboard: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <button onClick={() => handleEdit(activity)} className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded">
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                    <button onClick={() => handleDelete(activity.id)} className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    {canEdit(userRole) && (
+                                                        <button onClick={() => handleEdit(activity)} className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded">
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {canDelete(userRole) && (
+                                                        <button onClick={() => handleDelete(activity.id)} className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -584,34 +813,36 @@ const AdminDashboard: React.FC = () => {
             )}
             
             {/* Footer Stats (Desktop) */}
-            <div className="mt-8 hidden md:grid grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-                    <div className="bg-blue-50 p-3 rounded-full text-blue-600"><Layers className="w-5 h-5"/></div>
-                    <div>
-                        <p className="text-xs text-gray-500">סה"כ חוגים</p>
-                        <p className="text-lg font-bold text-gray-800">{activities.length}</p>
+            {currentView !== 'users' && (
+                <div className="mt-8 hidden md:grid grid-cols-3 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+                        <div className="bg-blue-50 p-3 rounded-full text-blue-600"><Layers className="w-5 h-5"/></div>
+                        <div>
+                            <p className="text-xs text-gray-500">סה"כ חוגים</p>
+                            <p className="text-lg font-bold text-gray-800">{activities.length}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+                        <div className="bg-purple-50 p-3 rounded-full text-purple-600"><MapPin className="w-5 h-5"/></div>
+                        <div>
+                            <p className="text-xs text-gray-500">מרכזים פעילים</p>
+                            <p className="text-lg font-bold text-gray-800">{uniqueLocationsCount}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+                        <div className="bg-green-50 p-3 rounded-full text-green-600"><BarChart3 className="w-5 h-5"/></div>
+                        <div>
+                            <p className="text-xs text-gray-500">מחיר ממוצע</p>
+                            <p className="text-lg font-bold text-gray-800">
+                                ₪{activities.length > 0 ? Math.round(activities.reduce((acc, curr) => acc + curr.price, 0) / activities.length) : 0}
+                            </p>
+                        </div>
                     </div>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-                    <div className="bg-purple-50 p-3 rounded-full text-purple-600"><MapPin className="w-5 h-5"/></div>
-                    <div>
-                        <p className="text-xs text-gray-500">מרכזים פעילים</p>
-                        <p className="text-lg font-bold text-gray-800">{uniqueLocationsCount}</p>
-                    </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-                    <div className="bg-green-50 p-3 rounded-full text-green-600"><BarChart3 className="w-5 h-5"/></div>
-                    <div>
-                        <p className="text-xs text-gray-500">מחיר ממוצע</p>
-                        <p className="text-lg font-bold text-gray-800">
-                            ₪{activities.length > 0 ? Math.round(activities.reduce((acc, curr) => acc + curr.price, 0) / activities.length) : 0}
-                        </p>
-                    </div>
-                </div>
-            </div>
+            )}
 
             {/* Danger Zone Footer */}
-            {activities.length > 0 && (
+            {activities.length > 0 && userRole === 'super_admin' && currentView !== 'users' && (
                 <div className="mt-12 pt-8 border-t border-gray-200">
                     <button onClick={handleDeleteAll} className="text-xs text-red-400 hover:text-red-600 underline">
                         מחיקת כל הנתונים (למפתחים בלבד)
