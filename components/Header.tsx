@@ -1,13 +1,33 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
   // Using the stable Imgur URL provided by the user
   const logoSrc = 'https://i.imgur.com/yEav0G8.png';
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-20">
+    <header 
+      className={`sticky top-0 z-20 transition-all duration-300 ${
+        isScrolled 
+          ? 'bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200/50' 
+          : 'bg-white shadow-sm'
+      }`}
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header Height h-16 */}
         <div className="flex items-center justify-between h-16"> 
