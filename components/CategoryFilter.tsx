@@ -1,6 +1,5 @@
 import React from 'react';
 import { Category } from '../types';
-import { iconMap, SportIcon } from './icons';
 
 interface CategoryFilterProps {
   categories: Category[];
@@ -13,9 +12,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCat
     <div className="flex justify-center flex-wrap gap-4 sm:gap-6">
       {categories.map((category) => {
         const isSelected = selectedCategories.includes(category.id);
-        // Lookup icon from map, fallback to SportIcon if not found
-        const Icon = iconMap[category.iconKey] || SportIcon;
-        
+        const Icon = category.icon;
         return (
           <div key={category.id} className="flex flex-col items-center gap-2">
             <button
