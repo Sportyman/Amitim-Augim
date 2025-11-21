@@ -1,47 +1,26 @@
 import React from 'react';
 import { Activity } from '../types';
-import { UsersIcon, ClockIcon } from './icons';
+import { UsersIcon, ClockIcon, LocationIcon } from './icons';
+import ActivityImage from './ActivityImage';
 
 interface ActivityListItemProps {
   activity: Activity;
   onShowDetails: () => void;
 }
 
-const LocationIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-        <circle cx="12" cy="10" r="3"></circle>
-    </svg>
-);
-
 const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDetails }) => {
-  const getKeywords = () => {
-    let titleKeywords = activity.title.split('-')[0].trim();
-    return `${titleKeywords},${activity.category}`;
-  };
-  
-  const imageUrl = activity.imageUrl && activity.imageUrl.length > 10 ? activity.imageUrl : `https://source.unsplash.com/400x300/?${encodeURIComponent(getKeywords())}`;
-  
-  const seedId = typeof activity.id === 'string' ? activity.id.charCodeAt(0) : activity.id;
-  const fallbackUrl = `https://picsum.photos/seed/${seedId}/400/300`;
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    if (e.currentTarget.src !== fallbackUrl) {
-      e.currentTarget.src = fallbackUrl;
-    }
-  };
-
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`;
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 flex flex-col sm:flex-row hover:shadow-lg">
-      <img 
-        className="w-full h-40 sm:w-48 sm:h-auto object-cover cursor-pointer" 
-        src={imageUrl} 
-        onError={handleImageError}
-        alt={activity.title}
-        onClick={onShowDetails}
-      />
+      <div className="w-full h-40 sm:w-48 sm:h-auto flex-shrink-0">
+        <ActivityImage 
+            activity={activity}
+            className="w-full h-full object-cover cursor-pointer"
+            onClick={onShowDetails}
+        />
+      </div>
+      
       <div className="p-4 flex flex-col flex-grow justify-between">
         <div>
             <div className="flex justify-between items-start">
@@ -55,7 +34,7 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
                     <span>{activity.price} ₪</span>
                 </div>
             </div>
-            <span className="text-xs text-sky-500 font-semibold bg-sky-100 px-2 py-1 rounded-full">{activity.category}</span>
+            <span className="text-xs text-sky-500 font-semibold bg-sky-100 px-2 py-1 rounded-full inline-block mt-1">{activity.category}</span>
 
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
                 <div className="flex items-center hover:text-blue-600 transition-colors group">
@@ -64,7 +43,7 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
                         href={mapUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hover:underline"
+                        className="hover:underline truncate"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {activity.location}

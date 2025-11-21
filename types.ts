@@ -14,12 +14,19 @@ export interface Activity {
   imageUrl: string;
   location: string;
   price: number;
-  ageGroup: string;
+  ageGroup: string; // Display string (e.g. "Golden Age")
   schedule: string;
   instructor: string | null;
   detailsUrl: string;
   ai_summary?: string;
   ai_tags?: string[];
+  
+  // New structured fields for better search/filtering
+  minAge?: number;
+  maxAge?: number;
+  gender?: 'male' | 'female' | 'mixed';
+  level?: 'beginner' | 'advanced' | 'all';
+  
   createdAt?: any; // For DB sorting
 }
 

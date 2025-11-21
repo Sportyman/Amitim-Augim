@@ -131,7 +131,8 @@ const PublicHome: React.FC = () => {
             activity.description.toLowerCase().includes(keyword) ||
             activity.category.toLowerCase().includes(keyword) ||
             (activity.ai_summary && activity.ai_summary.toLowerCase().includes(keyword)) ||
-            (activity.ai_tags && activity.ai_tags.some(tag => tag.toLowerCase().includes(keyword)))
+            (activity.ai_tags && activity.ai_tags.some(tag => tag.toLowerCase().includes(keyword))) ||
+            (activity.instructor && activity.instructor.toLowerCase().includes(keyword)) // Also search by instructor
       );
 
       const [locationName = '', cityName = ''] = activity.location.split(', ').map(s => s.trim());
@@ -141,6 +142,13 @@ const PublicHome: React.FC = () => {
       const ageMatch = (() => {
         if (userAge === '') return true;
         const userAgeNum = parseInt(userAge, 10);
+        
+        // Use new structured fields if available
+        if (activity.minAge !== undefined && activity.maxAge !== undefined) {
+            return userAgeNum >= activity.minAge && userAgeNum <= activity.maxAge;
+        }
+
+        // Fallback to old regex parsing
         const activityRange = parseAgeGroupToRange(activity.ageGroup);
         if (!activityRange) return true; 
         const [activityMin, activityMax] = activityRange;

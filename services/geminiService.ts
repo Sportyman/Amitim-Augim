@@ -1,5 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { Activity } from "../types";
 
 // FIX: Safely initialize API key to avoid immediate crash if environment variable is missing or process is undefined.
 const getApiKey = () => {
@@ -141,4 +142,75 @@ export const scrapeAndStructureData = async (html: string): Promise<string> => {
     }
     throw new Error("An unknown error occurred during data scraping.");
   }
+};
+
+export const enrichActivityMetadata = async (activity: Activity): Promise<Partial<Activity>> => {
+    if (!ai) return {};
+
+    const prompt = `
+    You are a data normalization expert for a Hebrew community center database.
+    Analyze the following activity data and return an Enriched Metadata object.
+    
+    Input Data:
+    Title: ${activity.title}
+    Description: ${activity.description}
+    Age Group Text: ${activity.ageGroup}
+    Instructor: ${activity.instructor || 'Not specified'}
+    Category: ${activity.category}
+
+    Tasks:
+    1. Parse "Age Group Text" into numeric minAge and maxAge.
+       - "Golden Age", "Third Age", "Pensioners", "גיל הזהב", "גמלאים" -> min: 60, max: 120
+       - "Adults", "מבוגרים", "נשים", "גברים" -> min: 18, max: 120
+       - "Youth", "Noar", "נוער" -> min: 12, max: 18
+       - "Kids", "Children", "ילדים" -> min: 6, max: 12
+       - "Tots", "Early Childhood", "גיל הרך" -> min: 0, max: 6
+       - "All ages", "Everyone", "לכל המשפחה" -> min: 0, max: 120
+       - Specific ranges "6-9" -> min: 6, max: 9
+    2. Extract instructor name if missing from 'Instructor' field but present in 'Description' (look for Hebrew names after keywords like 'מדריך', 'בהדרכת').
+    3. Generate 5-8 relevant Hebrew search tags (synonyms, related fields).
+    4. Determine specific Gender if mentioned (e.g., "Women only"), otherwise 'mixed'.
+
+    Return JSON only.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        minAge: { type: Type.INTEGER },
+                        maxAge: { type: Type.INTEGER },
+                        extractedInstructor: { type: Type.STRING, nullable: true },
+                        ai_tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        gender: { type: Type.STRING, enum: ['male', 'female', 'mixed'] },
+                        categoryCorrection: { type: Type.STRING, nullable: true }
+                    }
+                }
+            }
+        });
+
+        const result = JSON.parse(response.text || "{}");
+        
+        const updates: Partial<Activity> = {};
+        if (typeof result.minAge === 'number') updates.minAge = result.minAge;
+        if (typeof result.maxAge === 'number') updates.maxAge = result.maxAge;
+        if (result.ai_tags && Array.isArray(result.ai_tags)) updates.ai_tags = result.ai_tags;
+        if (result.gender) updates.gender = result.gender;
+        
+        // Only update instructor if we found one and the original was empty
+        if (result.extractedInstructor && (!activity.instructor || activity.instructor.length < 2)) {
+            updates.instructor = result.extractedInstructor;
+        }
+
+        return updates;
+
+    } catch (error) {
+        console.error("Enrichment failed", error);
+        return {};
+    }
 };

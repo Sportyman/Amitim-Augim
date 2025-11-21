@@ -7,7 +7,7 @@ import { Activity } from '../types';
 import AdminActivityForm from '../components/AdminActivityForm';
 import { 
     Plus, Edit, Trash2, LogOut, Database, Download,
-    Search, LayoutGrid, List, Users,
+    Search, LayoutGrid, List, Users, Sparkles,
     Menu, X, Image as ImageIcon, ChevronDown, ChevronUp,
     Home, ArrowRight
 } from 'lucide-react';
@@ -15,6 +15,7 @@ import { CATEGORIES } from '../constants';
 import { canEdit, canDelete, canCreate, canManageUsers, getRoleLabel } from '../utils/permissions';
 import BulkUpdateTool from '../components/admin/BulkUpdateTool';
 import UserManagement from '../components/admin/UserManagement';
+import AIEnrichmentTool from '../components/admin/AIEnrichmentTool';
 
 // --- Auto Logout Hook ---
 const TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes
@@ -56,7 +57,7 @@ const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users'>('list');
+  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users' | 'ai'>('list');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedActivityId, setExpandedActivityId] = useState<string | number | null>(null);
   
@@ -283,6 +284,17 @@ const AdminDashboard: React.FC = () => {
                 </button>
               )}
 
+              {/* AI Enrichment Tool */}
+              {canCreate(userRole) && (
+                <button 
+                    onClick={() => { setCurrentView('ai'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'ai' ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                    <Sparkles className="w-5 h-5" />
+                    אופטימיזציה (AI)
+                </button>
+              )}
+
               {/* Only Super Admin can manage users */}
               {canManageUsers(userRole) && (
                   <button 
@@ -343,7 +355,10 @@ const AdminDashboard: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">
-                        {currentView === 'list' ? 'רשימת החוגים' : currentView === 'bulk' ? 'עריכה וניהול קבוצתי' : 'ניהול צוות'}
+                        {currentView === 'list' ? 'רשימת החוגים' : 
+                         currentView === 'bulk' ? 'עריכה וניהול קבוצתי' : 
+                         currentView === 'ai' ? 'אופטימיזציה ושיפור נתונים' :
+                         'ניהול צוות'}
                     </h2>
                     {currentView === 'list' && (
                         <p className="text-gray-500 text-sm mt-1">
@@ -380,6 +395,8 @@ const AdminDashboard: React.FC = () => {
                 <UserManagement />
             ) : currentView === 'bulk' ? (
                 <BulkUpdateTool activities={activities} onUpdate={fetchActivities} />
+            ) : currentView === 'ai' ? (
+                <AIEnrichmentTool activities={activities} onRefresh={fetchActivities} />
             ) : (
                 <>
                     {/* Filters Toolbar */}
@@ -584,6 +601,7 @@ const AdminDashboard: React.FC = () => {
                                                                 <div><span className="font-semibold">מדריך:</span> {activity.instructor || '-'}</div>
                                                                 <div><span className="font-semibold">לו"ז:</span> {activity.schedule}</div>
                                                                 <div><span className="font-semibold">מזהה:</span> {activity.id}</div>
+                                                                {activity.minAge && <div><span className="font-semibold">גילאים:</span> {activity.minAge}-{activity.maxAge}</div>}
                                                             </div>
                                                         </div>
                                                     </td>
