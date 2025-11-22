@@ -160,14 +160,21 @@ export const enrichActivityMetadata = async (activity: Activity): Promise<Partia
 
     Tasks:
     1. Parse "Age Group Text" into numeric minAge and maxAge.
-       - "Golden Age", "Third Age", "Pensioners", "גיל הזהב", "גמלאים" -> min: 60, max: 120
-       - "Adults", "מבוגרים", "נשים", "גברים" -> min: 18, max: 120
-       - "Youth", "Noar", "נוער" -> min: 12, max: 18
-       - "Kids", "Children", "ילדים" -> min: 6, max: 12
-       - "Tots", "Early Childhood", "גיל הרך" -> min: 0, max: 6
-       - "All ages", "Everyone", "לכל המשפחה" -> min: 0, max: 120
-       - Specific ranges "6-9" -> min: 6, max: 9
-    2. Extract instructor name if missing from 'Instructor' field but present in 'Description' (look for Hebrew names after keywords like 'מדריך', 'בהדרכת').
+       IMPORTANT BUSINESS RULES - STRICTLY ENFORCE THESE:
+       - "Golden Age", "Third Age", "Pensioners", "גיל הזהב", "גמלאים", "גיל שלישי" -> MUST be min: 66, max: 120.
+       - "Adults", "מבוגרים", "נשים", "גברים" -> min: 18, max: 65.
+       - "Youth", "Noar", "נוער" -> min: 12, max: 18.
+       - "Kids", "Children", "ילדים" -> min: 6, max: 12.
+       - "Tots", "Early Childhood", "גיל הרך" -> min: 0, max: 6.
+       - "All ages", "Everyone", "לכל המשפחה", "רב גילאי" -> min: 0, max: 120.
+       
+    2. Extract instructor name if missing from 'Instructor' field but present in 'Description'.
+       CRITICAL INSTRUCTOR EXTRACTION RULE:
+       - Often, names are concatenated with phone numbers in the Hebrew description (e.g., "נועם054-1234567").
+       - You MUST split this. Extract "נועם" as the instructor.
+       - Look for patterns like [Hebrew Name][Phone Number] or [Hebrew Name] [Phone Number].
+       - Remove the phone number from the extracted name.
+
     3. Generate 5-8 relevant Hebrew search tags (synonyms, related fields).
     4. Determine specific Gender if mentioned (e.g., "Women only"), otherwise 'mixed'.
 
@@ -202,7 +209,7 @@ export const enrichActivityMetadata = async (activity: Activity): Promise<Partia
         if (result.ai_tags && Array.isArray(result.ai_tags)) updates.ai_tags = result.ai_tags;
         if (result.gender) updates.gender = result.gender;
         
-        // Only update instructor if we found one and the original was empty
+        // Only update instructor if we found one and the original was empty or just a phone number
         if (result.extractedInstructor && (!activity.instructor || activity.instructor.length < 2)) {
             updates.instructor = result.extractedInstructor;
         }

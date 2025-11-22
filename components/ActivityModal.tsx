@@ -72,7 +72,11 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                 <span className="inline-block px-3 py-1 bg-sky-500 text-white text-xs font-bold rounded-full mb-2 shadow-sm">
                     {activity.category}
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-bold text-white shadow-black drop-shadow-md">{activity.title}</h2>
+                <h2 className="text-2xl sm:text-3xl font-bold text-white shadow-black drop-shadow-md mb-1">{activity.title}</h2>
+                {/* Group Name Subtitle in Modal Header */}
+                {activity.groupName && (
+                    <p className="text-white/90 font-bold text-lg shadow-black drop-shadow-md">{activity.groupName}</p>
+                )}
             </div>
         </div>
 
@@ -100,21 +104,28 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                    </div>
                 </div>
                 
-                {activity.instructor && (
-                    <div className="flex items-center text-gray-700 col-span-1 sm:col-span-2">
+                {/* Instructor Name - Only if exists and not empty */}
+                {activity.instructor && activity.instructor.trim().length > 0 && (
+                    <div className="flex items-center text-gray-700 col-span-1 sm:col-span-2 bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm">
                        <UserIcon className="w-5 h-5 ml-3 text-sky-500" />
-                       <span className="font-medium">מדריך/ה: {activity.instructor}</span>
+                       <span className="font-bold text-gray-900 ml-2">מדריך/ה:</span>
+                       <span className="text-gray-800 font-medium">{activity.instructor}</span>
                     </div>
                 )}
 
+                {/* Age Group */}
                 <div className="flex items-center text-gray-700">
                    <UsersIcon className="w-5 h-5 ml-3 text-sky-500" />
-                   <span className="font-medium">{activity.ageGroup}</span>
+                   <span className="font-medium">גילאים: {activity.ageGroup}</span>
                 </div>
+                
+                {/* Schedule */}
                 <div className="flex items-center text-gray-700">
                    <ClockIcon className="w-5 h-5 ml-3 text-sky-500" />
                    <span className="font-medium">{activity.schedule}</span>
                 </div>
+                
+                {/* Price */}
                 <div className="flex items-center text-gray-700">
                    <span className="w-5 h-5 ml-3 text-center text-sky-500 font-bold">₪</span>
                    <span className="font-bold text-lg text-green-600">{activity.price} ₪</span>

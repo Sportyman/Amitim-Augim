@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Activity } from '../../types';
 import { dbService } from '../../services/dbService';
@@ -15,7 +16,7 @@ const AIEnrichmentTool: React.FC<AIEnrichmentToolProps> = ({ activities, onRefre
     const [logs, setLogs] = useState<string[]>([]);
 
     const runEnrichment = async () => {
-        if (!window.confirm('פעולה זו תעבור על כל החוגים ותשלח אותם לניתוח ב-Gemini כדי לתקן גילאים, תגיות ומדריכים. זה עשוי לקחת מספר דקות. להמשיך?')) return;
+        if (!window.confirm('פעולה זו תעבור על כל החוגים ותשלח אותם לניתוח ב-Gemini כדי לתקן גילאים, תגיות ומדריכים. \n\nתהליך זה ירוץ באיטיות (כ-4 שניות לחוג) כדי לשמור על מכסת השימוש החינמית ב-API.\n\nלהמשיך?')) return;
 
         setIsProcessing(true);
         setLogs([]);
@@ -23,13 +24,13 @@ const AIEnrichmentTool: React.FC<AIEnrichmentToolProps> = ({ activities, onRefre
 
         let updatedCount = 0;
 
-        // Process in chunks to avoid rate limits, but essentially sequential for safety in this demo context
+        // Process strictly sequential with delay to respect Free Tier Rate Limits (approx 15 RPM)
         for (let i = 0; i < activities.length; i++) {
             const activity = activities[i];
             setProgress(prev => ({ ...prev, current: i + 1 }));
 
             try {
-                // Skip if already enriched heavily (optional check, here we force update to fix bad data)
+                // Optional: Skip if already heavily enriched
                 // const needsUpdate = !activity.minAge || !activity.ai_tags; 
                 
                 const updates = await enrichActivityMetadata(activity);
@@ -41,6 +42,13 @@ const AIEnrichmentTool: React.FC<AIEnrichmentToolProps> = ({ activities, onRefre
                 }
             } catch (error) {
                 console.error(`Failed to enrich activity ${activity.id}`, error);
+                setLogs(prev => [`שגיאה בחוג ${activity.id}`, ...prev].slice(0, 5));
+            }
+
+            // SAFETY DELAY: 4000ms = 4 seconds.
+            // This ensures max 15 requests per minute, keeping it within standard Free Tier limits.
+            if (i < activities.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 4000));
             }
         }
 
@@ -65,7 +73,7 @@ const AIEnrichmentTool: React.FC<AIEnrichmentToolProps> = ({ activities, onRefre
             <div className="bg-white p-4 rounded-xl border border-purple-100 mb-6 text-sm text-gray-600 space-y-2">
                 <p className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    זיהוי טווחי גילאים מדויקים (למשל: המרה של "גיל הזהב" ל-60+)
+                    זיהוי טווחי גילאים מדויקים (למשל: המרה של "גיל הזהב" ל-66+)
                 </p>
                 <p className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
@@ -77,7 +85,7 @@ const AIEnrichmentTool: React.FC<AIEnrichmentToolProps> = ({ activities, onRefre
                 </p>
                 <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded-lg mt-2">
                     <AlertTriangle className="w-4 h-4" />
-                    <span>מומלץ לבצע גיבוי לפני הרצה.</span>
+                    <span>תהליך איטי (4 שניות לחוג) לשמירה על מסלול חינמי. מומלץ לגבות נתונים לפני.</span>
                 </div>
             </div>
 

@@ -14,7 +14,8 @@ export interface Activity {
   imageUrl: string;
   location: string;
   price: number;
-  ageGroup: string; // Display string (e.g. "Golden Age")
+  groupName?: string; // New field: Actual name of the group (e.g. "Women's Gymnastics")
+  ageGroup: string; // Display string (e.g. "Golden Age 66+")
   schedule: string;
   instructor: string | null;
   detailsUrl: string;

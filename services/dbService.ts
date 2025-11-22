@@ -1,3 +1,4 @@
+
 import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc } from 'firebase/firestore';
 import { Activity, AdminUser, UserRole } from '../types';

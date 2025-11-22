@@ -6,7 +6,7 @@ import { CATEGORIES } from '../../constants';
 import ActivityCard from '../ActivityCard';
 import { 
     Filter, Search, CheckCircle, Zap, RefreshCw, Eye, List, 
-    ChevronUp, ChevronDown, Image as ImageIcon 
+    ChevronUp, ChevronDown, Image as ImageIcon, Trash2, AlertTriangle
 } from 'lucide-react';
 
 interface BulkUpdateToolProps {
@@ -49,6 +49,24 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
             alert('שגיאה בביצוע העדכון');
         } finally {
             setIsProcessing(false);
+        }
+    };
+
+    const handleDeleteAll = async () => {
+        if (window.confirm('אזהרה חמורה!\n\nפעולה זו תמחק את *כל* החוגים מהמערכת לצמיתות.\nהאם אתה בטוח ב-100% שברצונך למחוק את כל מסד הנתונים?')) {
+            if (window.confirm('אישור סופי: האם למחוק את כל החוגים? לא ניתן יהיה לשחזר את המידע.')) {
+                setIsProcessing(true);
+                try {
+                    await dbService.deleteAllActivities();
+                    alert('כל הנתונים נמחקו בהצלחה.');
+                    onUpdate();
+                } catch (e) {
+                    console.error(e);
+                    alert('שגיאה במחיקת הנתונים');
+                } finally {
+                    setIsProcessing(false);
+                }
+            }
         }
     };
 
@@ -299,6 +317,29 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                     </div>
                 </div>
             )}
+
+            {/* Danger Zone for hard reset */}
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mt-12">
+                <div className="flex items-start gap-4">
+                    <div className="p-3 bg-red-100 rounded-full text-red-600">
+                        <AlertTriangle className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-red-800">אזור סכנה</h3>
+                        <p className="text-red-600 text-sm mt-1">
+                            פעולות באזור זה הן בלתי הפיכות. מומלץ לגבות נתונים לפני ביצוע פעולות אלו.
+                        </p>
+                        <button
+                            onClick={handleDeleteAll}
+                            disabled={isProcessing}
+                            className="mt-4 bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            מחק את כל הנתונים
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
