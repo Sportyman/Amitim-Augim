@@ -63,7 +63,8 @@ const PublicHome: React.FC = () => {
   }, []);
 
   const uniqueCities = useMemo(() => {
-    const cities = activities.map(a => (a.location || '').split(', ')[1]?.trim()).filter(Boolean);
+    // Use explicit city field if available, fallback to legacy parse
+    const cities = activities.map(a => a.city || (a.location || '').split(', ')[1]?.trim()).filter(Boolean);
     return [...new Set(cities)];
   }, [activities]);
 
@@ -155,8 +156,12 @@ const PublicHome: React.FC = () => {
             (activity.ai_tags && activity.ai_tags.some(tag => tag.toLowerCase().includes(keyword)))
       );
 
-      const [locationName = '', cityName = ''] = location.split(', ').map(s => s.trim());
-      const cityMatch = selectedCities.length === 0 || selectedCities.includes(cityName);
+      const [locationName = '', cityNameLegacy = ''] = location.split(', ').map(s => s.trim());
+      
+      // Match against explicit city field OR legacy parsed city
+      const activityCity = activity.city || cityNameLegacy;
+      const cityMatch = selectedCities.length === 0 || selectedCities.includes(activityCity);
+      
       const locationMatch = selectedLocations.length === 0 || selectedLocations.includes(locationName);
       
       const ageMatch = (() => {

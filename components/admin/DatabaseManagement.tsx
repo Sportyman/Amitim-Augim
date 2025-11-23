@@ -167,6 +167,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             name: getColumnIndex(['name', 'title', 'activity_name', 'שם', 'שם_החוג', 'פעילות']), 
             centerName: getColumnIndex(['center_name', 'center', 'location_name', 'מרכז', 'מתנס', 'מיקום']),
             address: getColumnIndex(['center_address', 'address', 'street', 'כתובת', 'רחוב']),
+            city: getColumnIndex(['city', 'city_name', 'עיר']),
             instructor: getColumnIndex(['instructor', 'teacher', 'guide', 'מדריך', 'מורה']),
             phone: getColumnIndex(['phone', 'mobile', 'contact', 'טלפון', 'נייד']),
             ageMin: getColumnIndex(['age_min', 'min_age', 'גיל_מינימום', 'מגיל']),
@@ -207,9 +208,19 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
             const center = getVal(colMap.centerName);
             const address = getVal(colMap.address);
+            const city = getVal(colMap.city) || 'הרצליה';
+            
             let fullLocation = center;
-            if (address && address !== center) fullLocation += `, ${address}`;
-            if (!fullLocation) fullLocation = 'הרצליה';
+            if (address && address !== center) {
+                // Only add city to full location if it's not already there
+                if (!address.includes(city)) {
+                    fullLocation += `, ${address}, ${city}`;
+                } else {
+                    fullLocation += `, ${address}`;
+                }
+            } else if (!center.includes(city)) {
+                 fullLocation += `, ${city}`;
+            }
 
             const priceVal = parseFloat(getVal(colMap.price).replace(/[^\d.]/g, ''));
             const price = (!isNaN(priceVal)) ? priceVal : 0;
@@ -327,6 +338,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 description: description,
                 imageUrl: '', 
                 location: fullLocation,
+                city: city,
                 price: price,
                 ageGroup: ageGroupDisplay,
                 schedule: scheduleStr,

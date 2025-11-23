@@ -105,6 +105,7 @@ const getAllActivities = async (): Promise<Activity[]> => {
           description: data.description || '',
           imageUrl: data.imageUrl || '',
           location: data.location || 'הרצליה',
+          city: data.city || 'הרצליה', // Default to Herzliya if missing
           price: typeof data.price === 'number' ? data.price : 0,
           ageGroup: data.ageGroup || '',
           schedule: data.schedule || '',

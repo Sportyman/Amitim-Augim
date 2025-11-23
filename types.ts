@@ -18,6 +18,7 @@ export interface Activity {
   description: string;
   imageUrl: string;
   location: string;
+  city?: string; // New explicit city field
   price: number;
   
   // Display fields
