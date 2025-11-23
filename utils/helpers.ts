@@ -44,8 +44,8 @@ export const formatSchedule = (schedule: string): string => {
   }
 
   // 2. Handle Frequency numbers (1.0, 2.0) at the start
-  // Pattern: Starts with number, optional .0, optional pipe or space
-  clean = clean.replace(/^(\d+)(\.0)?\s*\|?\s*/, (match, p1) => {
+  // Pattern: Starts with number, optional .0, optional pipe, AND optional existing frequency text to avoid duplication
+  clean = clean.replace(/^(\d+)(\.0)?\s*(\|)?\s*(פעמים בשבוע|פעם בשבוע|פעמים)?\.?\s*/, (match, p1) => {
       const num = parseInt(p1, 10);
       let text = '';
       switch (num) {
@@ -60,6 +60,7 @@ export const formatSchedule = (schedule: string): string => {
   clean = clean.replace(/\|/g, '.'); // Replace pipes with dots
   clean = clean.replace(/\s\./g, '.'); // Remove space before dot
   clean = clean.replace(/\.\./g, '.'); // Remove double dots
+  clean = clean.replace(/\.\s*\./g, '.'); // Remove dot space dot
 
   return clean.trim();
 };
