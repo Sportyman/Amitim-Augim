@@ -89,10 +89,10 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             return headers.findIndex(h => keywords.some(k => h === k));
         };
 
-        // --- NEW SCHEMA MAPPING ---
+        // --- NEW SCHEMA MAPPING based on user instructions ---
         const colMap = {
-            id: getColumnIndex(['id']), // Clean ID
-            name: getColumnIndex(['activity_name']), // Display Name
+            id: getColumnIndex(['id']), 
+            name: getColumnIndex(['activity_name']), 
             
             // Location
             centerName: getColumnIndex(['center_name']),
@@ -104,11 +104,11 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             
             // Ages
             ageText: getColumnIndex(['ages']),
-            ageGroup: getColumnIndex(['age_group']), // Children, Youth, etc.
+            ageGroup: getColumnIndex(['age_group']), 
             
             // Schedule
             daysList: getColumnIndex(['days_list']),
-            meetingsJson: getColumnIndex(['meetings_json']), // Single source of truth for schedule
+            meetingsJson: getColumnIndex(['meetings_json']), 
             frequency: getColumnIndex(['frequency_clean']),
             
             // Price
@@ -128,7 +128,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
             const getVal = (idx: number) => {
                 if (idx === -1 || !row[idx]) return '';
-                // Clean quotes and trim
                 let val = row[idx].trim();
                 if (val.startsWith('"') && val.endsWith('"')) {
                     val = val.substring(1, val.length - 1);
@@ -159,13 +158,28 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             
             try {
                 if (meetingsRaw) {
-                    // Fix potential double quotes in JSON string from CSV export
-                    const cleanJson = meetingsRaw.replace(/""/g, '"'); 
-                    const meetings = JSON.parse(cleanJson);
+                    // Fix potential single quotes to double quotes for JSON parsing if needed
+                    let cleanJson = meetingsRaw.replace(/'/g, '"');
+                    if (cleanJson.startsWith('"') && cleanJson.endsWith('"')) {
+                         cleanJson = cleanJson.substring(1, cleanJson.length -1).replace(/""/g, '"');
+                    }
                     
+                    // Try parsing
+                    let meetings;
+                    try {
+                        meetings = JSON.parse(meetingsRaw.replace(/""/g, '"'));
+                    } catch {
+                         // fallback for single quotes
+                         meetings = JSON.parse(meetingsRaw.replace(/'/g, '"'));
+                    }
+
                     if (Array.isArray(meetings)) {
                         const parts = meetings.map((m: any) => {
-                            return `יום ${m.day}' ${m.start}-${m.end}`;
+                            const day = m.day || '';
+                            const start = m.start || '';
+                            const end = m.end || '';
+                            if (start && end) return `יום ${day}' ${start}-${end}`;
+                            return `יום ${day}'`;
                         });
                         scheduleStr = parts.join(' | ');
                     }
@@ -174,21 +188,18 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 console.warn("Failed to parse meetings JSON for", title, meetingsRaw);
             }
 
-            // Fallback to frequency if JSON parse failed or empty
             if (!scheduleStr) {
                 scheduleStr = freq || 'לפרטים נוספים';
             } else if (freq && !scheduleStr.includes(freq)) {
-                 // Prepend frequency if available (e.g. "פעמיים בשבוע | יום א...")
                  scheduleStr = `${freq} | ${scheduleStr}`;
             }
 
             // 5. Age Group
-            const groupType = getVal(colMap.ageGroup); // ילדים, נוער...
-            const specificAges = getVal(colMap.ageText); // 7-12
+            const groupType = getVal(colMap.ageGroup); 
+            const specificAges = getVal(colMap.ageText); 
             let displayAge = groupType;
             if (specificAges) displayAge += ` (${specificAges})`;
             
-            // Attempt to parse min/max for filtering from the specific range
             let minAge = 0, maxAge = 120;
             const rangeMatch = specificAges.match(/(\d+)-(\d+)/);
             if (rangeMatch) {
@@ -199,24 +210,22 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             }
 
             // 6. Categories & Tags
-            const catRaw = getVal(colMap.appCategories); // e.g. "['ספורט', 'ילדים']"
-            let appCategory = 'ספורט'; // Default
+            const catRaw = getVal(colMap.appCategories); 
+            let appCategory = 'ספורט'; 
             let aiTags: string[] = [];
             
-            // Parse categories list
             try {
-                 const cats = JSON.parse(catRaw.replace(/'/g, '"')); // Handle single quotes often in python lists
+                 // Handle python list string representation
+                 const cats = JSON.parse(catRaw.replace(/'/g, '"')); 
                  if (Array.isArray(cats) && cats.length > 0) {
-                     appCategory = cats[0]; // Take the first one as primary
+                     appCategory = cats[0]; 
                  }
             } catch (e) {
-                // Fallback basic text matching if JSON parse fails
                 if (catRaw.includes('אומנות')) appCategory = 'אומנות';
                 else if (catRaw.includes('מוזיקה')) appCategory = 'מוזיקה';
                 else if (catRaw.includes('גיל הזהב')) appCategory = 'גיל הזהב';
             }
 
-            // Parse tags
             const tagsRaw = getVal(colMap.tags);
             try {
                 const parsedTags = JSON.parse(tagsRaw.replace(/'/g, '"'));
@@ -229,15 +238,13 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const instructor = getVal(colMap.instructor);
             const phone = getVal(colMap.phone);
 
-            // --- Construct Object ---
             const activity: Activity = {
                 id: activityId,
                 title: title,
-                // Using Age Group as the secondary title (group name)
                 groupName: groupType !== 'רב גילאי' ? groupType : '', 
                 category: appCategory,
-                description: '', // We don't use RAW description, relying on title/tags/details
-                imageUrl: '', // Placeholder
+                description: '', 
+                imageUrl: '', 
                 location: fullLocation,
                 price: price,
                 ageGroup: displayAge || 'לכל המשפחה',
@@ -247,7 +254,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 detailsUrl: '#',
                 minAge: minAge,
                 maxAge: maxAge,
-                ai_tags: aiTags, // Search tags
+                ai_tags: aiTags, 
                 createdAt: new Date()
             };
 
@@ -258,7 +265,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     };
 
     const processFile = (file: File) => {
-        const isCSV = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
+        const isCSV = file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
 
         if (!isCSV) {
             alert('אנא בחר קובץ CSV בלבד.');
@@ -272,7 +279,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 const dataToImport = parseCSV(content);
                 
                 if (dataToImport.length === 0) {
-                    alert('לא נמצאו נתונים תקינים בקובץ. וודא שהכותרות תואמות לפורמט החדש (activity_name, id...).');
+                    alert('לא נמצאו נתונים תקינים בקובץ. וודא שהכותרות תואמות לפורמט החדש.');
                     return;
                 }
 
@@ -300,7 +307,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         if (file) processFile(file);
     };
 
-    // --- Drag and Drop Handlers ---
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -324,7 +330,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             
-            {/* Import Section */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex items-center gap-3 mb-4 border-b border-gray-50 pb-4">
                     <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
@@ -375,7 +380,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 )}
             </div>
 
-            {/* Danger Zone */}
             <div className="bg-red-50 p-6 rounded-2xl shadow-sm border border-red-100">
                 <div className="flex items-center gap-3 mb-4 pb-4 border-b border-red-100">
                     <div className="bg-red-100 p-2 rounded-lg text-red-600">

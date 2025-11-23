@@ -40,7 +40,6 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
   }
 
   // Resolve exact address (already in location for new schema, but keep fallback)
-  const centerName = activity.location.split(',')[0].trim();
   const navigationQuery = activity.location; 
   const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(navigationQuery)}&navigate=yes`;
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navigationQuery)}`;
