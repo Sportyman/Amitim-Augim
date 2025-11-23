@@ -208,26 +208,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             if (!jsonSuccess) {
                 let displayFreq = '';
                 let displayDays = '';
-
-                // Clean Frequency: Convert "2.0" to "פעמיים בשבוע"
-                if (freqVal && freqVal !== 'nan') {
-                    // Parse float to handle "2.0", "2", "1.0" etc.
-                    const freqNum = parseFloat(freqVal);
-                    if (!isNaN(freqNum)) {
-                        const roundedFreq = Math.round(freqNum);
-                        switch (roundedFreq) {
-                            case 1: displayFreq = 'פעם בשבוע'; break;
-                            case 2: displayFreq = 'פעמיים בשבוע'; break;
-                            case 3: displayFreq = '3 פעמים בשבוע'; break;
-                            case 4: displayFreq = '4 פעמים בשבוע'; break;
-                            case 5: displayFreq = '5 פעמים בשבוע'; break;
-                            case 6: displayFreq = '6 פעמים בשבוע'; break;
-                            default: displayFreq = `${roundedFreq} פעמים בשבוע`;
-                        }
-                    } else {
-                        displayFreq = freqVal;
-                    }
-                }
+                let daysCount = 0;
 
                 // Clean Days: Handle "['א'', 'ב'']" or "['א', 'ב']" or "['Thu']"
                 if (daysRaw && daysRaw !== 'nan' && daysRaw !== '[]') {
@@ -247,7 +228,34 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         return s.trim();
                     }).filter(s => s.length > 0);
                     
+                    daysCount = cleanParts.length;
                     displayDays = cleanParts.join(', ');
+                }
+
+                // LOGIC FIX: If we have explicit days, use their count to determine frequency text
+                // This overrides potential data inconsistencies in the CSV (e.g. freq=2 but only 1 day listed)
+                if (daysCount > 0) {
+                    switch (daysCount) {
+                        case 1: displayFreq = 'פעם בשבוע'; break;
+                        case 2: displayFreq = 'פעמיים בשבוע'; break;
+                        case 3: displayFreq = '3 פעמים בשבוע'; break;
+                        case 4: displayFreq = '4 פעמים בשבוע'; break;
+                        case 5: displayFreq = '5 פעמים בשבוע'; break;
+                        default: displayFreq = `${daysCount} פעמים בשבוע`;
+                    }
+                } else if (freqVal && freqVal !== 'nan') {
+                    // Fallback to numeric frequency column only if days are missing
+                    const freqNum = parseFloat(freqVal);
+                    if (!isNaN(freqNum)) {
+                        const roundedFreq = Math.round(freqNum);
+                        switch (roundedFreq) {
+                            case 1: displayFreq = 'פעם בשבוע'; break;
+                            case 2: displayFreq = 'פעמיים בשבוע'; break;
+                            default: displayFreq = `${roundedFreq} פעמים בשבוע`;
+                        }
+                    } else {
+                        displayFreq = freqVal;
+                    }
                 }
 
                 if (displayFreq && displayDays) {
