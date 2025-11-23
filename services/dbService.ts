@@ -23,10 +23,30 @@ export const dbService = {
     try {
       const q = query(collection(db, COLLECTION_NAME)); 
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Activity));
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        // SAFETY: Ensure strings are strings to prevent UI crashes
+        return {
+            id: doc.id,
+            title: data.title || 'ללא שם',
+            category: data.category || 'כללי',
+            description: data.description || '',
+            imageUrl: data.imageUrl || '',
+            location: data.location || 'הרצליה',
+            price: typeof data.price === 'number' ? data.price : 0,
+            ageGroup: data.ageGroup || '',
+            schedule: data.schedule || '',
+            instructor: data.instructor || null,
+            phone: data.phone || null,
+            detailsUrl: data.detailsUrl || '#',
+            isVisible: data.isVisible !== false, // Default to true
+            tags: Array.isArray(data.tags) ? data.tags : [],
+            ai_tags: Array.isArray(data.ai_tags) ? data.ai_tags : [],
+            minAge: data.minAge,
+            maxAge: data.maxAge,
+            ...data
+        } as Activity;
+      });
     } catch (error) {
       console.error("Error getting activities: ", error);
       return [];

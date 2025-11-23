@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from '../components/Header';
 import CategoryFilter from '../components/CategoryFilter';
@@ -33,14 +32,11 @@ const PublicHome: React.FC = () => {
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   useEffect(() => {
-    // Switch to fetch from DB Service (Firestore) instead of local JSON
     const loadData = async () => {
         try {
             const data = await dbService.getAllActivities();
-            // If DB is empty, fallback to local json for initial view (optional, or show empty state)
             if (data.length === 0) {
-                 // Fallback only if strictly needed, or just let it be empty to encourage Import in Admin
-                 const res = await fetch('activities.json'); // Changed to relative path
+                 const res = await fetch('activities.json');
                  const jsonData = await res.json();
                  setActivities(jsonData);
             } else {
@@ -48,8 +44,7 @@ const PublicHome: React.FC = () => {
             }
         } catch (error) {
             console.error("Error fetching activities:", error);
-            // Fallback to local JSON on error
-            fetch('activities.json') // Changed to relative path
+            fetch('activities.json')
                 .then(res => res.json())
                 .then(data => setActivities(data))
                 .catch(e => console.error("Fatal fallback error", e));
@@ -61,12 +56,12 @@ const PublicHome: React.FC = () => {
   }, []);
 
   const uniqueCities = useMemo(() => {
-    const cities = activities.map(a => a.location.split(', ')[1]?.trim()).filter(Boolean);
+    const cities = activities.map(a => (a.location || '').split(', ')[1]?.trim()).filter(Boolean);
     return [...new Set(cities)];
   }, [activities]);
 
   const uniqueLocations = useMemo(() => {
-      const locations = activities.map(a => a.location.split(', ')[0]?.trim()).filter(Boolean);
+      const locations = activities.map(a => (a.location || '').split(', ')[0]?.trim()).filter(Boolean);
       return [...new Set(locations)];
   }, [activities]);
 
@@ -121,8 +116,16 @@ const PublicHome: React.FC = () => {
 
   const filteredActivities = useMemo(() => {
     return activities.filter((activity) => {
-      // 1. Visibility Filter - Hide hidden items
+      // 1. Visibility Filter
       if (activity.isVisible === false) return false;
+
+      // SAFETY: Ensure strings are valid
+      const title = (activity.title || '').toLowerCase();
+      const description = (activity.description || '').toLowerCase();
+      const category = (activity.category || '').toLowerCase();
+      const location = (activity.location || '');
+      const aiSummary = (activity.ai_summary || '').toLowerCase();
+      const instructor = (activity.instructor || '').toLowerCase();
 
       const categoryMatch =
         selectedCategories.length === 0 ||
@@ -130,15 +133,16 @@ const PublicHome: React.FC = () => {
 
       const searchKeywords = [searchTerm.toLowerCase(), ...relatedKeywords.map(k => k.toLowerCase())];
       const termMatch = searchTerm.trim() === '' || searchKeywords.some(keyword => 
-            activity.title.toLowerCase().includes(keyword) ||
-            activity.description.toLowerCase().includes(keyword) ||
-            activity.category.toLowerCase().includes(keyword) ||
-            (activity.ai_summary && activity.ai_summary.toLowerCase().includes(keyword)) ||
-            (activity.ai_tags && activity.ai_tags.some(tag => tag.toLowerCase().includes(keyword))) ||
-            (activity.instructor && activity.instructor.toLowerCase().includes(keyword)) // Also search by instructor
+            title.includes(keyword) ||
+            description.includes(keyword) ||
+            category.includes(keyword) ||
+            aiSummary.includes(keyword) ||
+            instructor.includes(keyword) ||
+            (activity.tags && activity.tags.some(tag => tag.toLowerCase().includes(keyword))) ||
+            (activity.ai_tags && activity.ai_tags.some(tag => tag.toLowerCase().includes(keyword)))
       );
 
-      const [locationName = '', cityName = ''] = activity.location.split(', ').map(s => s.trim());
+      const [locationName = '', cityName = ''] = location.split(', ').map(s => s.trim());
       const cityMatch = selectedCities.length === 0 || selectedCities.includes(cityName);
       const locationMatch = selectedLocations.length === 0 || selectedLocations.includes(locationName);
       
@@ -146,13 +150,11 @@ const PublicHome: React.FC = () => {
         if (userAge === '') return true;
         const userAgeNum = parseInt(userAge, 10);
         
-        // Use new structured fields if available
         if (activity.minAge !== undefined && activity.maxAge !== undefined) {
             return userAgeNum >= activity.minAge && userAgeNum <= activity.maxAge;
         }
 
-        // Fallback to old regex parsing
-        const activityRange = parseAgeGroupToRange(activity.ageGroup);
+        const activityRange = parseAgeGroupToRange(activity.ageGroup || '');
         if (!activityRange) return true; 
         const [activityMin, activityMax] = activityRange;
         return userAgeNum >= activityMin && userAgeNum <= activityMax;
@@ -163,7 +165,7 @@ const PublicHome: React.FC = () => {
         if (minPriceText === '' && maxPriceText === '') return true;
         const minPrice = minPriceText !== '' ? parseInt(minPriceText, 10) : 0;
         const maxPrice = maxPriceText !== '' ? parseInt(maxPriceText, 10) : Infinity;
-        return activity.price >= minPrice && activity.price <= maxPrice;
+        return (activity.price || 0) >= minPrice && (activity.price || 0) <= maxPrice;
       })();
 
       return categoryMatch && termMatch && cityMatch && locationMatch && ageMatch && priceMatch;

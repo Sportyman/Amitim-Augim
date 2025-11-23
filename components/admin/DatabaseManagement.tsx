@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { dbService } from '../../services/dbService';
-import { Trash2, Upload, AlertTriangle, FileText, FileSpreadsheet } from 'lucide-react';
+import { Trash2, Upload, AlertTriangle, FileText, Database, FileSpreadsheet } from 'lucide-react';
 import { Activity } from '../../types';
 
 interface DatabaseManagementProps {
@@ -36,10 +36,17 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     };
 
     // --- Robust CSV Parser ---
+    // Handles quotes, newlines within quotes, and commas correctly.
     const robustCSVParser = (text: string): string[][] => {
         // Remove BOM
         const cleanText = text.trim().replace(/^\uFEFF/, '');
         
+        // Detect separator: grab first line and count tabs vs commas
+        const firstLine = cleanText.split('\n')[0];
+        const commaCount = (firstLine.match(/,/g) || []).length;
+        const tabCount = (firstLine.match(/\t/g) || []).length;
+        const separator = tabCount > commaCount ? '\t' : ',';
+
         const rows: string[][] = [];
         let currentRow: string[] = [];
         let currentField = '';
@@ -56,7 +63,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 } else {
                     inQuotes = !inQuotes;
                 }
-            } else if ((char === ',' || char === '\t') && !inQuotes) {
+            } else if (char === separator && !inQuotes) {
                 currentRow.push(currentField);
                 currentField = '';
             } else if ((char === '\n' || char === '\r') && !inQuotes) {
@@ -86,6 +93,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
         
         const getColumnIndex = (keywords: string[]) => {
+            // Exact match first, then loose match
             let idx = headers.findIndex(h => keywords.includes(h));
             if (idx === -1) {
                 idx = headers.findIndex(h => keywords.some(k => h.includes(k)));
@@ -93,7 +101,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             return idx;
         };
 
-        // --- SCHEMA MAPPING based on new file format ---
+        // --- SCHEMA MAPPING based on 'herzliya_master_final_CLASSIFIED.csv' ---
         const colMap = {
             id: getColumnIndex(['activity_id']), 
             name: getColumnIndex(['name']), 
@@ -104,7 +112,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             
             // Contact
             instructor: getColumnIndex(['instructor_name']),
-            phone: getColumnIndex(['phone_clean', 'phone']),
+            phone: getColumnIndex(['phone_clean']),
             
             // Ages
             ageMin: getColumnIndex(['age_min']),
@@ -135,33 +143,38 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
         const activities: Activity[] = [];
 
+        // Iterate rows (skip header)
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (row.length < 2 && !row[0]) continue;
 
             const getVal = (idx: number) => {
                 if (idx === -1 || !row[idx]) return '';
-                // Robust parser already handles quotes, so we just trim whitespace
-                return row[idx].trim().replace(/""/g, '"');
+                let val = row[idx].trim();
+                // Clean outer quotes if strictly wrapped
+                if (val.startsWith('"') && val.endsWith('"')) {
+                    val = val.substring(1, val.length - 1);
+                }
+                return val.replace(/""/g, '"');
             };
 
             // 1. Basic Info
             const activityId = getVal(colMap.id) || `gen_${i}_${Date.now()}`;
             const title = getVal(colMap.name);
-            if (!title) continue; 
+            if (!title) continue; // Skip invalid rows
 
             // 2. Location
             const center = getVal(colMap.centerName);
             const address = getVal(colMap.address);
             let fullLocation = center;
-            if (address && address !== center && !center.includes(address)) fullLocation += `, ${address}`;
+            if (address && address !== center) fullLocation += `, ${address}`;
             if (!fullLocation) fullLocation = 'הרצליה';
 
             // 3. Price
             const priceVal = parseFloat(getVal(colMap.price));
             const price = (!isNaN(priceVal)) ? priceVal : 0;
 
-            // 4. Description
+            // 4. Description (Raw preferred, fallback to Auto)
             let description = getVal(colMap.descRaw);
             if (!description || description === 'nan' || description.length < 5) {
                 description = getVal(colMap.descAuto);
@@ -173,6 +186,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const maxAge = parseFloat(getVal(colMap.ageMax));
             const mainGroup = getVal(colMap.mainAgeGroup);
             
+            // Display text for age
             let ageGroupDisplay = mainGroup;
             if (!ageGroupDisplay || ageGroupDisplay === 'nan') {
                 if (!isNaN(minAge)) {
@@ -182,14 +196,14 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 }
             }
 
-            // 6. Schedule Construction
+            // 6. Schedule Construction (JSON Authority)
             let scheduleStr = '';
             const freq = getVal(colMap.frequency);
             const meetingsRaw = getVal(colMap.meetingsJson);
 
             if (meetingsRaw && meetingsRaw !== '[]' && meetingsRaw !== 'nan') {
                 try {
-                    // Normalize quotes for JSON parsing
+                    // Normalize quotes for JSON parsing (Python style ['a'] to ["a"])
                     let jsonStr = meetingsRaw.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true');
                     const meetings = JSON.parse(jsonStr);
 
@@ -208,33 +222,38 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 }
             }
 
+            // Fallback schedule if JSON failed or empty
             if (!scheduleStr) {
                  const days = getVal(colMap.daysList);
                  if (days && days !== 'nan') scheduleStr = `ימים: ${days}`;
             }
 
+            // Prepend Frequency
             if (freq && freq !== 'nan') {
                 scheduleStr = scheduleStr ? `${freq} | ${scheduleStr}` : freq;
             }
             if (!scheduleStr) scheduleStr = 'לפרטים נוספים';
 
-            // 7. Categories & Tags
+            // 7. Categories & Tags (Parsing Python-style lists)
             const parseListStr = (str: string): string[] => {
                 if (!str || str === 'nan' || str === '[]') return [];
                 try {
+                    // Simple regex parser for ['a', 'b'] style strings
                     const matches = str.match(/'([^']*)'/g);
                     if (matches) {
                         return matches.map(m => m.replace(/'/g, '').trim());
                     }
+                    // Try JSON
                     return JSON.parse(str.replace(/'/g, '"'));
                 } catch (e) {
-                    return [str.replace(/[\[\]']/g, '')];
+                    return [str.replace(/[\[\]']/g, '')]; // Fallback cleanup
                 }
             };
 
             const categories = parseListStr(getVal(colMap.categoriesApp));
-            let appCategory = 'ספורט'; 
+            let appCategory = 'ספורט'; // Default
             if (categories.length > 0) {
+                // Map specific terms to known app constants if needed, or take first
                 appCategory = categories[0];
             }
 
@@ -248,6 +267,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const instructor = getVal(colMap.instructor);
             const phone = getVal(colMap.phone);
 
+            // Construct Activity Object
             const activity: Activity = {
                 id: activityId,
                 title: title,
@@ -264,8 +284,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 detailsUrl: finalLink,
                 minAge: !isNaN(minAge) ? minAge : undefined,
                 maxAge: !isNaN(maxAge) ? maxAge : undefined,
-                tags: tags,
-                ai_tags: tags,
+                tags: tags, // Store for search
+                ai_tags: tags, // Compatible with existing search logic
                 isVisible: true,
                 createdAt: new Date()
             };
@@ -291,7 +311,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 const dataToImport = parseCSV(content);
                 
                 if (dataToImport.length === 0) {
-                    alert('לא נמצאו נתונים תקינים בקובץ. וודא שהכותרות תואמות לפורמט החדש.');
+                    alert('לא נמצאו נתונים תקינים בקובץ. וודא שהכותרות תואמות לפורמט החדש (activity_id, name, etc).');
                     return;
                 }
 
@@ -341,6 +361,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
+            
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex items-center gap-3 mb-4 border-b border-gray-50 pb-4">
                     <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
@@ -372,7 +393,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         {isDragActive ? 'שחרר את הקובץ כאן...' : 'גרור לכאן קובץ CSV'}
                     </p>
                     <p className="text-gray-500 text-sm mt-2 pointer-events-none">
-                        תומך בעמודות החדשות: activity_id, name, meetings_json, phone_clean
+                        תומך בעמודות החדשות: activity_id, name, meetings_json, phone_clean, etc.
                     </p>
                     <input 
                         type="file" 
