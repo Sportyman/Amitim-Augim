@@ -50,7 +50,7 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
             </div>
 
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
-                <div className="flex items-center hover:text-blue-600 transition-colors group">
+                <div className="flex items-center hover:text-blue-600 transition-colors group" title="מיקום">
                     <LocationIcon className="w-4 h-4 ml-2 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
                     <a 
                         href={mapUrl}
@@ -63,12 +63,12 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
                     </a>
                 </div>
                 
-                <div className="flex items-center text-gray-500">
+                <div className="flex items-center text-gray-500" title="קהל יעד">
                     <UsersIcon className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
                     <span>{activity.ageGroup}</span>
                 </div>
 
-                <div className="flex items-start col-span-1 md:col-span-2">
+                <div className="flex items-start col-span-1 md:col-span-2" title="זמנים">
                     <ClockIcon className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0 mt-0.5" />
                     <span>{activity.schedule}</span>
                 </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { dbService } from '../../services/dbService';
 import { Trash2, Upload, AlertTriangle, FileText, FileSpreadsheet, ImageOff } from 'lucide-react';
@@ -235,13 +236,31 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             // Fallback schedule if JSON failed or empty
             if (!scheduleStr) {
                  const days = getVal(colMap.daysList);
-                 if (days && days !== 'nan') scheduleStr = `ימים: ${days}`;
+                 if (days && days !== 'nan') {
+                     // Clean Python list format ["ה'", "ב'"] -> ה', ב'
+                     const cleanDays = days.replace(/[\[\]"']/g, '').trim();
+                     if (cleanDays) {
+                         // Format nicer: add "יום" prefix if it's just letters
+                         const dayParts = cleanDays.split(',').map(d => {
+                             const trimmed = d.trim();
+                             return trimmed.length <= 3 ? `יום ${trimmed}` : trimmed;
+                         });
+                         scheduleStr = dayParts.join(', ');
+                     }
+                 }
             }
 
-            // Prepend Frequency
+            // Prepend Frequency with cleanup (1.0 -> פעם בשבוע)
             if (freq && freq !== 'nan') {
-                scheduleStr = scheduleStr ? `${freq} | ${scheduleStr}` : freq;
+                let displayFreq = freq;
+                if (freq === '1.0' || freq === '1') displayFreq = 'פעם בשבוע';
+                else if (freq === '2.0' || freq === '2') displayFreq = 'פעמיים בשבוע';
+                else if (freq === '3.0' || freq === '3') displayFreq = '3 פעמים בשבוע';
+                else displayFreq = freq.replace('.0', ''); // Remove decimal
+
+                scheduleStr = scheduleStr ? `${displayFreq}, ${scheduleStr}` : displayFreq;
             }
+            
             if (!scheduleStr) scheduleStr = 'לפרטים נוספים';
 
             // 7. Categories & Tags (Parsing Python-style lists)

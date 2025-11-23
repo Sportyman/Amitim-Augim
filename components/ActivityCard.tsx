@@ -48,7 +48,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
         
         <div className="mt-auto space-y-1.5 text-xs text-gray-600 pt-3">
             {/* Location */}
-            <div className="flex items-center text-gray-600 hover:text-blue-600 transition-colors group">
+            <div className="flex items-center text-gray-600 hover:text-blue-600 transition-colors group" title="מיקום">
                 <LocationIcon className="w-3.5 h-3.5 ml-2 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
                 <a 
                     href={mapUrl} 
@@ -62,13 +62,13 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
             </div>
 
             {/* Age Group (Gray with Icon) */}
-            <div className="flex items-center text-gray-500">
+            <div className="flex items-center text-gray-500" title="קהל יעד">
                 <UsersIcon className="w-3.5 h-3.5 ml-2 text-gray-400 flex-shrink-0" />
                 <span className="truncate">{activity.ageGroup}</span>
             </div>
 
              {/* Schedule - Removed truncate to show full details */}
-             <div className="flex items-start">
+             <div className="flex items-start" title="זמנים">
                 <ClockIcon className="w-3.5 h-3.5 ml-2 text-gray-400 flex-shrink-0 mt-0.5" />
                 <span className="line-clamp-2">{activity.schedule}</span>
             </div>

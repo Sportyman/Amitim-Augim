@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Activity } from '../types';
 import { CENTER_ADDRESSES } from '../constants';
@@ -94,7 +95,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
             
             {/* Key Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm">
-                <div className="flex items-start text-gray-700 col-span-1 sm:col-span-2">
+                <div className="flex items-start text-gray-700 col-span-1 sm:col-span-2" title="מיקום">
                    <LocationIcon className="w-5 h-5 ml-3 text-sky-500 flex-shrink-0 mt-0.5" />
                    <div>
                        <span className="font-bold block text-base">{activity.location}</span>
@@ -113,24 +114,24 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                 </div>
                 
                 {activity.instructor && (
-                    <div className="flex items-center text-gray-700 col-span-1 sm:col-span-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
+                    <div className="flex items-center text-gray-700 col-span-1 sm:col-span-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm" title="מדריך/ה">
                        <UserIcon className="w-5 h-5 ml-3 text-sky-500" />
                        <span className="font-bold text-gray-900 ml-2">מדריך/ה: </span>
                        <span className="text-gray-800">{activity.instructor}</span>
                     </div>
                 )}
 
-                <div className="flex items-center text-gray-700">
+                <div className="flex items-center text-gray-700" title="קהל יעד">
                    <UsersIcon className="w-5 h-5 ml-3 text-sky-500" />
                    <div>
                         <span className="block font-medium">{activity.ageGroup}</span>
                    </div>
                 </div>
-                <div className="flex items-start text-gray-700">
+                <div className="flex items-start text-gray-700" title="זמנים">
                    <ClockIcon className="w-5 h-5 ml-3 text-sky-500 flex-shrink-0 mt-0.5" />
                    <span className="font-medium leading-snug">{activity.schedule}</span>
                 </div>
-                <div className="flex items-center text-gray-700">
+                <div className="flex items-center text-gray-700" title="מחיר">
                    <span className="w-5 h-5 ml-3 text-center text-sky-500 font-bold">₪</span>
                    <span className="font-bold text-lg text-green-600">{activity.price} ₪</span>
                 </div>
