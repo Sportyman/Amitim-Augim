@@ -207,7 +207,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             
             let fullLocation = center;
             if (address && address !== center) {
-                // Only add city to full location if it's not already there
                 if (!address.includes(city)) {
                     fullLocation += `, ${address}, ${city}`;
                 } else {
@@ -227,7 +226,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             
             let ageGroupDisplay = mainGroup;
             
-            // Clean JSON list format if present: ["a", "b"] -> a, b
             if (ageGroupDisplay && ageGroupDisplay.startsWith('[') && ageGroupDisplay.endsWith(']')) {
                  const cleanBrackets = ageGroupDisplay.replace(/[\[\]]/g, '');
                  const parts = cleanBrackets.split(',');
@@ -253,7 +251,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 }
             }
 
-            // Schedule Parsing
             let scheduleStr = '';
             const freqVal = getVal(colMap.frequency);
             const meetingsRaw = getVal(colMap.meetingsJson);
@@ -363,7 +360,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 maxAge: !isNaN(maxAge) ? maxAge : undefined,
                 tags: tags,
                 ai_tags: tags,
-                isVisible: true,
+                // isVisible is explicitly NOT set here to allow dbService to manage defaults/persistence
                 createdAt: new Date()
             };
             activities.push(activity);
@@ -400,6 +397,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                     onRefresh();
                 }
             } catch (error) {
+                console.error(error);
                 alert('שגיאה בקריאת הקובץ.');
             } finally {
                 setIsUploading(false);
@@ -435,7 +433,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <h3 className="font-bold text-gray-800 text-lg mb-2">עדכון חכם (CSV)</h3>
-                        <p className="text-sm text-gray-500 mb-6">ייבוא קובץ חדש יעדכן רשומות קיימות ויוסיף חדשות. תמונות ישמרו.</p>
+                        <p className="text-sm text-gray-500 mb-6">ייבוא קובץ חדש יעדכן רשומות קיימות ויוסיף חדשות. תמונות והגדרות נראות ישמרו.</p>
 
                         <div 
                             className={`flex flex-col items-center justify-center p-10 border-2 border-dashed border-blue-100 bg-gray-50 hover:bg-blue-50/30 rounded-xl transition-all cursor-pointer mb-4`}

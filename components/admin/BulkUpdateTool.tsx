@@ -6,8 +6,10 @@ import { CATEGORIES } from '../../constants';
 import ActivityCard from '../ActivityCard';
 import { 
     Filter, Search, CheckCircle, Zap, RefreshCw, Eye, List, 
-    ChevronUp, ChevronDown, Image as ImageIcon, EyeOff, X, Check
+    ChevronUp, ChevronDown, Image as ImageIcon, EyeOff, X, Check,
+    Calendar
 } from 'lucide-react';
+import { formatStringList } from '../../utils/helpers';
 
 interface BulkUpdateToolProps {
     activities: Activity[];
@@ -22,6 +24,10 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
     const [selectedValues, setSelectedValues] = useState<string[]>([]);
     const [searchText, setSearchText] = useState('');
     
+    // Age Range State
+    const [ageOperator, setAgeOperator] = useState<'none' | 'under' | 'over'>('none');
+    const [ageThreshold, setAgeThreshold] = useState<string>('');
+
     // Action State
     const [updateField, setUpdateField] = useState<'imageUrl' | 'category' | 'price' | 'isVisible'>('isVisible');
     const [updateValue, setUpdateValue] = useState('');
@@ -33,14 +39,20 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
         let options: string[] = [];
         
         if (filterType === 'title') {
-            // Extract clean group names (e.g., "Judo - Center" -> "Judo")
             options = activities.map(a => a.title.split('-')[0].trim());
         } else if (filterType === 'category') {
             options = activities.map(a => a.category);
         } else if (filterType === 'location') {
             options = activities.map(a => a.location.split(',')[0].trim());
         } else if (filterType === 'age') {
-            options = activities.map(a => a.ageGroup);
+            // Flatten and clean age strings
+            activities.forEach(a => {
+                const clean = formatStringList(a.ageGroup);
+                // Split by comma if it was a list
+                clean.split(',').forEach(part => {
+                    if (part.trim()) options.push(part.trim());
+                });
+            });
         }
 
         // Unique and sorted
@@ -54,18 +66,47 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
 
     // --- Filtering Logic ---
     const matchingActivities = useMemo(() => {
-        // If nothing selected and no search text (and we haven't selected anything yet), show nothing to avoid accidents
-        if (selectedValues.length === 0 && !searchText) return [];
+        // Safety: If filtering by age range, require threshold
+        if (filterType === 'age' && ageOperator !== 'none' && !ageThreshold) return [];
+        
+        // If nothing selected and no search text (and no age operator), show nothing
+        if (selectedValues.length === 0 && !searchText && ageOperator === 'none') return [];
 
         return activities.filter(a => {
             let val = '';
             
+            // 1. Numeric Age Filter Logic
+            if (filterType === 'age' && ageOperator !== 'none') {
+                const threshold = parseInt(ageThreshold, 10);
+                if (isNaN(threshold)) return false;
+
+                const min = a.minAge || 0;
+                const max = a.maxAge || 120;
+
+                if (ageOperator === 'under') {
+                    // "Under 18" means activities aimed at max age < 18
+                    return max < threshold;
+                } else if (ageOperator === 'over') {
+                    // "Over 60" means activities aimed at min age > 60
+                    return min > threshold;
+                }
+            }
+
+            // 2. String/Tag Matching Logic
             if (filterType === 'title') val = a.title.split('-')[0].trim();
             else if (filterType === 'category') val = a.category;
             else if (filterType === 'location') val = a.location.split(',')[0].trim();
-            else if (filterType === 'age') val = a.ageGroup;
+            else if (filterType === 'age') {
+                // For string matching (chips), check if ANY of the selected tags exist in the activity's age string
+                const actAgeStr = formatStringList(a.ageGroup);
+                if (selectedValues.length > 0) {
+                    return selectedValues.some(sel => actAgeStr.includes(sel));
+                }
+                // Fallback to search text if no chips selected
+                return searchText ? actAgeStr.includes(searchText) : false;
+            }
 
-            // Match if value is in selected list OR (if list empty) matches search text
+            // General Match Logic (for non-age types)
             const matchesSelection = selectedValues.length > 0 
                 ? selectedValues.includes(val)
                 : true;
@@ -74,16 +115,10 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                 ? val.toLowerCase().includes(searchText.toLowerCase())
                 : true;
 
-            // If we have selections, we ignore the search text for the *final filtering* 
-            // (search is just used to find options to select). 
-            // BUT, if no selections, we treat search text as a free-text filter.
-            if (selectedValues.length > 0) {
-                return matchesSelection;
-            } else {
-                return matchesSearch;
-            }
+            if (selectedValues.length > 0) return matchesSelection;
+            return matchesSearch;
         });
-    }, [activities, filterType, selectedValues, searchText]);
+    }, [activities, filterType, selectedValues, searchText, ageOperator, ageThreshold]);
 
     // --- Handlers ---
     const toggleSelection = (value: string) => {
@@ -96,11 +131,11 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
 
     const handleFilterTypeChange = (type: FilterType) => {
         setFilterType(type);
-        setSelectedValues([]); // Reset selections on type change
+        setSelectedValues([]); 
         setSearchText('');
+        setAgeOperator('none'); // Reset range filter
     };
 
-    // Logic to handle boolean visibility for preview
     const previewActivity: Activity | null = matchingActivities.length > 0 ? {
         ...matchingActivities[0],
         [updateField]: updateField === 'price' 
@@ -113,11 +148,11 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
     const handleExecute = async () => {
         if (matchingActivities.length === 0) return;
         
-        const actionName = updateField === 'isVisible' 
+        const actionDescription = updateField === 'isVisible' 
             ? (updateValue === 'false' ? 'הסתרת' : 'הצגת') 
             : 'עדכון';
             
-        if (!window.confirm(`האם אתה בטוח שברצונך לבצע ${actionName} עבור ${matchingActivities.length} החוגים שנמצאו?`)) return;
+        if (!window.confirm(`האם אתה בטוח שברצונך לבצע ${actionDescription} עבור ${matchingActivities.length} החוגים שנמצאו?`)) return;
 
         setIsProcessing(true);
         try {
@@ -128,11 +163,25 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
 
             const updates = { [updateField]: val };
             await dbService.updateActivitiesBatch(ids, updates);
-            alert('העדכון בוצע בהצלחה!');
+            
+            // Build success message
+            let msg = `פעולה הושלמה בהצלחה!\n`;
+            msg += `${actionDescription} ${matchingActivities.length} חוגים.\n`;
+            
+            if (filterType === 'age' && ageOperator !== 'none') {
+                const opText = ageOperator === 'under' ? 'מתחת לגיל' : 'מעל גיל';
+                msg += `(חוגים לקהל יעד ${opText} ${ageThreshold})`;
+            } else if (selectedValues.length > 0) {
+                msg += `(עבור הבחירה: ${selectedValues.join(', ')})`;
+            }
+
+            alert(msg);
             onUpdate();
-            // Clear selection after update
+            
+            // Reset
             setSelectedValues([]);
             setSearchText('');
+            setAgeOperator('none');
         } catch (e) {
             console.error(e);
             alert('שגיאה בביצוע העדכון');
@@ -161,7 +210,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Panel: Advanced Multi-Select Filter */}
+                {/* Left Panel: Filter */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[600px]">
                     <div className="flex items-center gap-3 mb-6 border-b border-gray-50 pb-4 shrink-0">
                         <div className="bg-sky-100 p-2 rounded-lg text-sky-600">
@@ -174,26 +223,59 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                     </div>
 
                     <div className="space-y-4 flex-col flex h-full overflow-hidden">
-                        
-                        {/* Filter Tabs */}
                         <div className="flex gap-2 shrink-0">
                             {renderFilterTab('title', 'שם החוג')}
                             {renderFilterTab('category', 'קטגוריה')}
-                            {renderFilterTab('age', 'גילאים')}
+                            {renderFilterTab('age', 'קהל יעד (גיל)')}
                             {renderFilterTab('location', 'מיקום')}
                         </div>
 
-                        {/* Search Input */}
-                        <div className="relative shrink-0">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input 
-                                type="text" 
-                                value={searchText}
-                                onChange={(e) => setSearchText(e.target.value)}
-                                placeholder={`חיפוש ${filterType === 'title' ? 'חוג' : filterType === 'category' ? 'קטגוריה' : 'ערך'}...`}
-                                className="block w-full p-2.5 pl-10 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
-                            />
-                        </div>
+                        {/* Age Specific Range Filters */}
+                        {filterType === 'age' && (
+                            <div className="shrink-0 p-3 bg-orange-50 rounded-xl border border-orange-100 space-y-2">
+                                <p className="text-xs font-bold text-orange-800 flex items-center gap-1">
+                                    <Calendar className="w-3 h-3"/>
+                                    בחירה לפי טווח גילאים מספרי:
+                                </p>
+                                <div className="flex gap-2">
+                                    <select 
+                                        value={ageOperator}
+                                        onChange={(e) => setAgeOperator(e.target.value as any)}
+                                        className="bg-white border border-orange-200 text-sm rounded-lg p-2 flex-1 outline-none focus:ring-2 focus:ring-orange-300"
+                                    >
+                                        <option value="none">-- בחר טווח --</option>
+                                        <option value="under">קהל יעד צעיר מ...</option>
+                                        <option value="over">קהל יעד מבוגר מ...</option>
+                                    </select>
+                                    <input 
+                                        type="number" 
+                                        value={ageThreshold}
+                                        onChange={(e) => setAgeThreshold(e.target.value)}
+                                        placeholder="גיל (למשל 18)"
+                                        disabled={ageOperator === 'none'}
+                                        className="w-24 p-2 rounded-lg border border-orange-200 text-sm outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-100"
+                                    />
+                                </div>
+                                <p className="text-[10px] text-gray-500">
+                                    {ageOperator === 'under' && "יבחר חוגים המיועדים לילדים מתחת לגיל שהזנת."}
+                                    {ageOperator === 'over' && "יבחר חוגים המיועדים למבוגרים מעל הגיל שהזנת."}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Text Search (Hidden if using age range) */}
+                        {ageOperator === 'none' && (
+                            <div className="relative shrink-0">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    value={searchText}
+                                    onChange={(e) => setSearchText(e.target.value)}
+                                    placeholder={`חיפוש ${filterType === 'title' ? 'חוג' : 'ערך'}...`}
+                                    className="block w-full p-2.5 pl-10 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
+                                />
+                            </div>
+                        )}
 
                         {/* Selected Tags Area */}
                         {selectedValues.length > 0 && (
@@ -208,59 +290,55 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                         <X className="w-3 h-3" />
                                     </button>
                                 ))}
-                                <button 
-                                    onClick={() => setSelectedValues([])}
-                                    className="text-xs text-sky-600 underline px-2"
-                                >
-                                    נקה הכל
-                                </button>
+                                <button onClick={() => setSelectedValues([])} className="text-xs text-sky-600 underline px-2">נקה</button>
                             </div>
                         )}
 
-                        {/* Options Grid (Scrollable) */}
-                        <div className="flex-1 overflow-y-auto border border-gray-100 rounded-xl p-2 bg-gray-50">
-                            {filteredOptions.length > 0 ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {filteredOptions.map(opt => {
-                                        const isSelected = selectedValues.includes(opt);
-                                        return (
-                                            <button
-                                                key={opt}
-                                                onClick={() => toggleSelection(opt)}
-                                                className={`text-right px-3 py-2 rounded-lg text-xs font-medium transition-all border flex justify-between items-center ${
-                                                    isSelected 
-                                                        ? 'bg-sky-500 text-white border-sky-600 shadow-sm' 
-                                                        : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300 hover:bg-sky-50'
-                                                }`}
-                                            >
-                                                <span className="truncate ml-2" title={opt}>{opt}</span>
-                                                {isSelected && <Check className="w-3 h-3 shrink-0" />}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                                    לא נמצאו תוצאות לחיפוש זה
-                                </div>
-                            )}
-                        </div>
+                        {/* Options Grid (Hidden if using age range) */}
+                        {ageOperator === 'none' && (
+                            <div className="flex-1 overflow-y-auto border border-gray-100 rounded-xl p-2 bg-gray-50">
+                                {filteredOptions.length > 0 ? (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {filteredOptions.map(opt => {
+                                            const isSelected = selectedValues.includes(opt);
+                                            return (
+                                                <button
+                                                    key={opt}
+                                                    onClick={() => toggleSelection(opt)}
+                                                    className={`text-right px-3 py-2 rounded-lg text-xs font-medium transition-all border flex justify-between items-center ${
+                                                        isSelected 
+                                                            ? 'bg-sky-500 text-white border-sky-600 shadow-sm' 
+                                                            : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300 hover:bg-sky-50'
+                                                    }`}
+                                                >
+                                                    <span className="truncate ml-2" title={opt}>{opt}</span>
+                                                    {isSelected && <Check className="w-3 h-3 shrink-0" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+                                        לא נמצאו אפשרויות לבחירה
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         
-                        {/* Counter Footer */}
                         <div className={`shrink-0 p-3 rounded-xl border border-dashed flex items-center justify-center gap-2 transition-colors ${matchingActivities.length > 0 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
                             {matchingActivities.length > 0 ? (
                                 <>
                                     <CheckCircle className="w-5 h-5" />
-                                    <span className="font-bold">נבחרו {matchingActivities.length} חוגים לעדכון</span>
+                                    <span className="font-bold">נמצאו {matchingActivities.length} חוגים</span>
                                 </>
                             ) : (
-                                <span>אנא בחר אפשרויות מהרשימה...</span>
+                                <span>אנא בחר אפשרויות לסינון...</span>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Right Panel: Action & Preview */}
+                {/* Right Panel: Action */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[600px]">
                      <div className="flex items-center gap-3 mb-6 border-b border-gray-50 pb-4 shrink-0">
                         <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
@@ -411,7 +489,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                                     </div>
                                                     <div className="mr-4">
                                                         <div className="text-sm font-medium text-gray-900">{activity.title}</div>
-                                                        <div className="text-xs text-gray-500">{activity.ageGroup}</div>
+                                                        <div className="text-xs text-gray-500">{formatStringList(activity.ageGroup)}</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -424,7 +502,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                                 {activity.location}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">
-                                                {activity.minAge && activity.maxAge ? `${activity.minAge}-${activity.maxAge}` : '-'}
+                                                {activity.minAge && activity.maxAge ? `${activity.minAge}-${activity.maxAge}` : (activity.ageGroup || '-')}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-left text-xs">
                                                  {activity.isVisible === false ? (
@@ -456,11 +534,6 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                                                 <div><span className="font-semibold">לו"ז:</span> {activity.schedule}</div>
                                                                 <div><span className="font-semibold">מחיר:</span> ₪{activity.price}</div>
                                                                 <div><span className="font-semibold">קישור:</span> <a href={activity.detailsUrl} target="_blank" rel="noreferrer" className="text-sky-600 hover:underline">פתח קישור</a></div>
-                                                            </div>
-                                                             <div className="flex flex-wrap gap-2 pt-2">
-                                                                {activity.ai_tags?.map((tag, i) => (
-                                                                    <span key={i} className="px-2 py-1 bg-white border border-gray-200 rounded-md text-xs text-gray-500">#{tag}</span>
-                                                                ))}
                                                             </div>
                                                         </div>
                                                     </div>

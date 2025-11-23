@@ -107,7 +107,7 @@ const getAllActivities = async (): Promise<Activity[]> => {
           description: data.description || '',
           imageUrl: data.imageUrl || '',
           location: data.location || 'הרצליה',
-          city: data.city || 'הרצליה', // Default to Herzliya if missing
+          city: data.city || 'הרצליה',
           price: typeof data.price === 'number' ? data.price : 0,
           ageGroup: data.ageGroup || '',
           schedule: data.schedule || '',
@@ -201,8 +201,13 @@ const deleteActivity = async (id: string) => {
 const importActivities = async (activities: Activity[]) => {
   const collectionRef = collection(db, COLLECTION_NAME);
   
-  // Get existing images to avoid overwriting with blank/broken URLs if user manually set them
+  // 1. Get existing images to avoid overwriting with blank/broken URLs if user manually set them
   const savedImagesMap = await getSavedImagesMap();
+
+  // 2. Get existing IDs to decide on persistence (isVisible)
+  // We fetch only IDs to save bandwidth
+  const existingDocsSnapshot = await getDocs(collectionRef);
+  const existingIds = new Set(existingDocsSnapshot.docs.map(doc => doc.id));
 
   // Log specific bulk event
   await addDoc(collection(db, AUDIT_COLLECTION), {
@@ -235,20 +240,34 @@ const importActivities = async (activities: Activity[]) => {
                finalId = docRef.id;
           }
           
+          // Handle Image persistence
           let finalImageUrl = data.imageUrl;
           if (savedImagesMap[finalId]) {
               finalImageUrl = savedImagesMap[finalId];
           } else if (data.imageUrl && data.imageUrl.length > 5) {
+              // New image from CSV, save to cache
               const imgCacheRef = doc(db, IMAGES_COLLECTION, finalId);
               chunkBatch.set(imgCacheRef, { imageUrl: data.imageUrl, updatedAt: new Date() }, { merge: true });
           }
 
+          // Prepare Data
           const cleanData = sanitizeData({
               ...data,
               imageUrl: finalImageUrl,
               updatedAt: new Date(),
               createdAt: data.createdAt || new Date() 
           });
+
+          // Handle isVisible persistence:
+          // If document exists, do NOT overwrite isVisible unless explicitly provided in CSV (which is undefined here usually)
+          // If document is new, set isVisible = true
+          if (existingIds.has(finalId)) {
+              // Update: remove isVisible from payload so it doesn't reset
+              delete cleanData.isVisible; 
+          } else {
+              // Create: Default to visible
+              cleanData.isVisible = true;
+          }
 
           chunkBatch.set(docRef, cleanData, { merge: true }); 
       });
