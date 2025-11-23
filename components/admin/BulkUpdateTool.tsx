@@ -6,7 +6,7 @@ import { CATEGORIES } from '../../constants';
 import ActivityCard from '../ActivityCard';
 import { 
     Filter, Search, CheckCircle, Zap, RefreshCw, Eye, List, 
-    ChevronUp, ChevronDown, Image as ImageIcon 
+    ChevronUp, ChevronDown, Image as ImageIcon, EyeOff 
 } from 'lucide-react';
 
 interface BulkUpdateToolProps {
@@ -17,7 +17,8 @@ interface BulkUpdateToolProps {
 const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate }) => {
     const [searchField, setSearchField] = useState<'title' | 'category' | 'location'>('title');
     const [searchValue, setSearchValue] = useState('');
-    const [updateField, setUpdateField] = useState<'imageUrl' | 'category' | 'price'>('imageUrl');
+    // Added 'isVisible' to updateField
+    const [updateField, setUpdateField] = useState<'imageUrl' | 'category' | 'price' | 'isVisible'>('imageUrl');
     const [updateValue, setUpdateValue] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [expandedId, setExpandedId] = useState<string | number | null>(null);
@@ -28,9 +29,14 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
         return val.includes(searchValue.toLowerCase());
     });
 
+    // Logic to handle boolean visibility for preview
     const previewActivity: Activity | null = matchingActivities.length > 0 ? {
         ...matchingActivities[0],
-        [updateField]: updateField === 'price' ? Number(updateValue) : updateValue
+        [updateField]: updateField === 'price' 
+            ? Number(updateValue) 
+            : updateField === 'isVisible' 
+                ? (updateValue === 'true') 
+                : updateValue
     } : null;
 
     const handleExecute = async () => {
@@ -40,7 +46,11 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
         setIsProcessing(true);
         try {
             const ids = matchingActivities.map(a => String(a.id));
-            const updates = { [updateField]: updateField === 'price' ? Number(updateValue) : updateValue };
+            let val: any = updateValue;
+            if (updateField === 'price') val = Number(updateValue);
+            if (updateField === 'isVisible') val = (updateValue === 'true');
+
+            const updates = { [updateField]: val };
             await dbService.updateActivitiesBatch(ids, updates);
             alert('העדכון בוצע בהצלחה!');
             onUpdate();
@@ -133,6 +143,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                     <option value="imageUrl">תמונה ראשית</option>
                                     <option value="category">קטגוריה</option>
                                     <option value="price">מחיר</option>
+                                    <option value="isVisible">נראות (הצגה/הסתרה)</option>
                                 </select>
                             </div>
 
@@ -148,6 +159,16 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                         {CATEGORIES.map(c => (
                                             <option key={c.id} value={c.name}>{c.name}</option>
                                         ))}
+                                    </select>
+                                ) : updateField === 'isVisible' ? (
+                                     <select 
+                                        value={updateValue}
+                                        onChange={(e) => setUpdateValue(e.target.value)}
+                                        className="block w-full p-3 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    >
+                                        <option value="">בחר סטטוס...</option>
+                                        <option value="true">הצג באפליקציה</option>
+                                        <option value="false">הסתר מהאפליקציה</option>
                                     </select>
                                 ) : (
                                     <input 
@@ -179,9 +200,19 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
 
                         <div className="flex flex-col">
                              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-2 text-center">תצוגה מקדימה חיה</span>
-                             <div className="transform scale-90 origin-top -mt-2 pointer-events-none">
+                             <div className="transform scale-90 origin-top -mt-2 pointer-events-none opacity-80">
                                 {previewActivity ? (
-                                    <ActivityCard activity={previewActivity} onShowDetails={() => {}} />
+                                    <div className="relative">
+                                         <ActivityCard activity={previewActivity} onShowDetails={() => {}} />
+                                         {updateField === 'isVisible' && updateValue === 'false' && (
+                                             <div className="absolute inset-0 bg-gray-800/60 flex items-center justify-center rounded-lg">
+                                                 <div className="bg-white px-4 py-2 rounded-full flex items-center gap-2 font-bold text-gray-800">
+                                                     <EyeOff className="w-4 h-4"/>
+                                                     מוסתר
+                                                 </div>
+                                             </div>
+                                         )}
+                                    </div>
                                 ) : (
                                     <div className="h-64 w-full bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 p-4 text-center">
                                         <Eye className="w-8 h-8 mb-2 opacity-50" />
@@ -217,7 +248,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                     <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">קטגוריה</th>
                                     <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">מיקום</th>
                                     <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">מחיר</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">מזהה</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">סטטוס</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -225,7 +256,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                     <React.Fragment key={activity.id}>
                                         <tr 
                                             onClick={() => toggleRowExpansion(activity.id)} 
-                                            className={`cursor-pointer transition-colors ${expandedId === activity.id ? 'bg-sky-50' : 'hover:bg-gray-50'}`}
+                                            className={`cursor-pointer transition-colors ${expandedId === activity.id ? 'bg-sky-50' : 'hover:bg-gray-50'} ${activity.isVisible === false ? 'bg-red-50/50' : ''}`}
                                         >
                                             <td className="px-6 py-4 text-gray-400">
                                                 {expandedId === activity.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -256,8 +287,12 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">
                                                 ₪{activity.price}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-left text-xs text-gray-400">
-                                                #{activity.id}
+                                            <td className="px-6 py-4 whitespace-nowrap text-left text-xs">
+                                                 {activity.isVisible === false ? (
+                                                     <span className="text-red-500 font-bold flex items-center gap-1"><EyeOff className="w-3 h-3"/> מוסתר</span>
+                                                 ) : (
+                                                     <span className="text-green-600 flex items-center gap-1"><Eye className="w-3 h-3"/> גלוי</span>
+                                                 )}
                                             </td>
                                         </tr>
                                         

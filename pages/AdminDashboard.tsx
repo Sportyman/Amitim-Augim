@@ -9,7 +9,7 @@ import {
     Plus, Edit, Trash2, LogOut, Database, Download,
     Search, LayoutGrid, List, Users, Sparkles,
     Menu, X, Image as ImageIcon, ChevronDown, ChevronUp,
-    Home, ArrowRight, Save
+    Home, ArrowRight, Save, Eye, EyeOff
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { canEdit, canDelete, canCreate, canManageUsers, getRoleLabel } from '../utils/permissions';
@@ -411,7 +411,7 @@ const AdminDashboard: React.FC = () => {
                         {/* Mobile Cards View (Simplified) */}
                         <div className="grid grid-cols-1 gap-4 md:hidden">
                             {filteredActivities.map(activity => (
-                                <div key={activity.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
+                                <div key={activity.id} className={`bg-white p-4 rounded-xl shadow-sm border ${activity.isVisible === false ? 'border-red-100 bg-red-50' : 'border-gray-100'} flex flex-col gap-4`}>
                                     <div className="flex gap-4" onClick={() => toggleRowExpansion(activity.id)}>
                                         <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                                             {activity.imageUrl ? (
@@ -432,6 +432,7 @@ const AdminDashboard: React.FC = () => {
                                             <p className="text-sm text-gray-500 mt-1 truncate">{activity.location}</p>
                                             <div className="flex items-center justify-between mt-2">
                                                 <span className="font-bold text-green-600">{activity.price} ₪</span>
+                                                {activity.isVisible === false && <span className="text-xs font-bold text-red-500 flex items-center gap-1"><EyeOff className="w-3 h-3"/> מוסתר</span>}
                                                  {expandedActivityId === activity.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                                             </div>
                                         </div>
@@ -476,7 +477,7 @@ const AdminDashboard: React.FC = () => {
                                         <React.Fragment key={activity.id}>
                                             <tr 
                                                 onClick={() => toggleRowExpansion(activity.id)} 
-                                                className={`cursor-pointer transition-colors ${expandedActivityId === activity.id ? 'bg-sky-50' : 'hover:bg-gray-50'}`}
+                                                className={`cursor-pointer transition-colors ${expandedActivityId === activity.id ? 'bg-sky-50' : 'hover:bg-gray-50'} ${activity.isVisible === false ? 'bg-red-50/30' : ''}`}
                                             >
                                                 <td className="px-6 py-4 text-gray-400">
                                                     {expandedActivityId === activity.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -508,7 +509,15 @@ const AdminDashboard: React.FC = () => {
                                                     ₪{activity.price}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-left">
-                                                    <span className="text-xs text-gray-400">פעיל</span>
+                                                    {activity.isVisible === false ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold text-red-600 bg-red-100">
+                                                            <EyeOff className="w-3 h-3" /> מוסתר
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold text-green-600 bg-green-50">
+                                                            <Eye className="w-3 h-3" /> פעיל
+                                                        </span>
+                                                    )}
                                                 </td>
                                             </tr>
                                             {/* Expanded Details Row */}

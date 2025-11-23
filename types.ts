@@ -24,6 +24,9 @@ export interface Activity {
   phone?: string | null; // New explicit phone field
   detailsUrl: string;
   
+  // Visibility Control
+  isVisible?: boolean; // Default should be true
+
   // AI & Search Metadata
   ai_summary?: string;
   ai_tags?: string[]; // Synonyms and search tags

@@ -121,6 +121,9 @@ const PublicHome: React.FC = () => {
 
   const filteredActivities = useMemo(() => {
     return activities.filter((activity) => {
+      // 1. Visibility Filter - Hide hidden items
+      if (activity.isVisible === false) return false;
+
       const categoryMatch =
         selectedCategories.length === 0 ||
         selectedCategories.includes(CATEGORIES.find(c => c.name === activity.category)?.id || '');

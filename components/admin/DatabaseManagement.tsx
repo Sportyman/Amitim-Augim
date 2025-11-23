@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { dbService } from '../../services/dbService';
 import { Trash2, Upload, AlertTriangle, FileText, Database, FileSpreadsheet } from 'lucide-react';
@@ -254,7 +255,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 detailsUrl: '#',
                 minAge: minAge,
                 maxAge: maxAge,
-                ai_tags: aiTags, 
+                ai_tags: aiTags,
+                isVisible: true, // Default visible on import
                 createdAt: new Date()
             };
 
