@@ -4,6 +4,7 @@ import { Activity } from '../../types';
 import { dbService } from '../../services/dbService';
 import { CATEGORIES } from '../../constants';
 import ActivityCard from '../ActivityCard';
+import { parseAgeGroupToRange } from '../../utils/helpers';
 import { 
     Filter, Search, CheckCircle, Zap, RefreshCw, Eye, List, 
     ChevronUp, ChevronDown, Image as ImageIcon, EyeOff 
@@ -15,17 +16,51 @@ interface BulkUpdateToolProps {
 }
 
 const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate }) => {
-    const [searchField, setSearchField] = useState<'title' | 'category' | 'location'>('title');
+    const [searchField, setSearchField] = useState<'title' | 'category' | 'location' | 'age'>('title');
+    const [ageOperator, setAgeOperator] = useState<'max_lt' | 'min_gt'>('max_lt'); // max_lt = kids (max age < X), min_gt = seniors (min age > X)
     const [searchValue, setSearchValue] = useState('');
-    // Added 'isVisible' to updateField
-    const [updateField, setUpdateField] = useState<'imageUrl' | 'category' | 'price' | 'isVisible'>('imageUrl');
+    
+    const [updateField, setUpdateField] = useState<'imageUrl' | 'category' | 'price' | 'isVisible'>('isVisible');
     const [updateValue, setUpdateValue] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [expandedId, setExpandedId] = useState<string | number | null>(null);
 
     const matchingActivities = activities.filter(a => {
         if (!searchValue) return false;
-        const val = String(a[searchField] || '').toLowerCase();
+
+        // Age Logic
+        if (searchField === 'age') {
+            const threshold = parseInt(searchValue, 10);
+            if (isNaN(threshold)) return false;
+
+            // Determine Min/Max for this activity
+            let min = a.minAge;
+            let max = a.maxAge;
+
+            // Fallback to parsing string if numeric fields are missing
+            if (min === undefined || max === undefined) {
+                const range = parseAgeGroupToRange(a.ageGroup);
+                if (range) {
+                    min = range[0];
+                    max = range[1];
+                } else {
+                    return false; // Can't determine age
+                }
+            }
+
+            if (ageOperator === 'max_lt') {
+                // "Hide all under 18" -> We look for activities where the Max Age is <= 18
+                // e.g. "6-9" (max 9) matches. "16-20" (max 20) does NOT match.
+                return max !== undefined && max <= threshold;
+            } else if (ageOperator === 'min_gt') {
+                // "Hide all over 66" -> We look for activities where Min Age is >= 66
+                return min !== undefined && min >= threshold;
+            }
+            return false;
+        }
+
+        // Standard Text Logic
+        const val = String(a[searchField as keyof Activity] || '').toLowerCase();
         return val.includes(searchValue.toLowerCase());
     });
 
@@ -41,7 +76,12 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
 
     const handleExecute = async () => {
         if (matchingActivities.length === 0) return;
-        if (!window.confirm(`האם אתה בטוח שברצונך לעדכן את ${matchingActivities.length} החוגים שנמצאו?`)) return;
+        
+        const actionName = updateField === 'isVisible' 
+            ? (updateValue === 'false' ? 'הסתרת' : 'הצגת') 
+            : 'עדכון';
+            
+        if (!window.confirm(`האם אתה בטוח שברצונך לבצע ${actionName} עבור ${matchingActivities.length} החוגים שנמצאו?`)) return;
 
         setIsProcessing(true);
         try {
@@ -69,6 +109,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Panel: Filter */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
                     <div className="flex items-center gap-3 mb-6 border-b border-gray-50 pb-4">
                         <div className="bg-sky-100 p-2 rounded-lg text-sky-600">
@@ -85,26 +126,58 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                             <label className="text-sm font-bold text-gray-700 mb-2 block">סנן לפי שדה:</label>
                             <select 
                                 value={searchField} 
-                                onChange={(e) => setSearchField(e.target.value as any)}
+                                onChange={(e) => {
+                                    setSearchField(e.target.value as any);
+                                    setSearchValue(''); // Reset search on field change
+                                }}
                                 className="block w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
                             >
                                 <option value="title">שם החוג (מכיל טקסט)</option>
                                 <option value="category">קטגוריה נוכחית</option>
                                 <option value="location">מיקום</option>
+                                <option value="age">קהל יעד (גיל)</option>
                             </select>
                         </div>
+
+                        {/* Dynamic Input based on Field */}
                         <div>
-                            <label className="text-sm font-bold text-gray-700 mb-2 block">ערך לחיפוש:</label>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input 
-                                    type="text" 
-                                    value={searchValue}
-                                    onChange={(e) => setSearchValue(e.target.value)}
-                                    placeholder={searchField === 'title' ? "למשל: ג'ודו" : searchField === 'category' ? "למשל: ספורט" : "למשל: מתנ\"ס יבור"}
-                                    className="block w-full p-3 pl-10 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
-                                />
-                            </div>
+                            <label className="text-sm font-bold text-gray-700 mb-2 block">ערך לסינון:</label>
+                            
+                            {searchField === 'age' ? (
+                                <div className="flex gap-2">
+                                    <select
+                                        value={ageOperator}
+                                        onChange={(e) => setAgeOperator(e.target.value as any)}
+                                        className="w-1/2 p-3 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:ring-2 focus:ring-sky-500 outline-none"
+                                    >
+                                        <option value="max_lt">קהל יעד צעיר מ- (מתאים לילדים/נוער)</option>
+                                        <option value="min_gt">קהל יעד מבוגר מ- (מתאים למבוגרים/גיל זהב)</option>
+                                    </select>
+                                    <input 
+                                        type="number" 
+                                        value={searchValue}
+                                        onChange={(e) => setSearchValue(e.target.value)}
+                                        placeholder="גיל (לדוגמה: 18)"
+                                        className="w-1/2 p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <input 
+                                        type="text" 
+                                        value={searchValue}
+                                        onChange={(e) => setSearchValue(e.target.value)}
+                                        placeholder={searchField === 'title' ? "למשל: ג'ודו" : searchField === 'category' ? "למשל: ספורט" : "למשל: מתנ\"ס יבור"}
+                                        className="block w-full p-3 pl-10 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
+                                    />
+                                </div>
+                            )}
+                            {searchField === 'age' && (
+                                <p className="text-xs text-gray-400 mt-2">
+                                    * מסנן לפי גיל מינימלי/מקסימלי של החוג
+                                </p>
+                            )}
                         </div>
                         
                         <div className={`mt-4 p-4 rounded-xl border border-dashed flex items-center justify-center gap-2 transition-colors ${matchingActivities.length > 0 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
@@ -120,6 +193,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                     </div>
                 </div>
 
+                {/* Right Panel: Action */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
                      <div className="flex items-center gap-3 mb-6 border-b border-gray-50 pb-4">
                         <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
@@ -140,10 +214,10 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                     onChange={(e) => setUpdateField(e.target.value as any)}
                                     className="block w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50"
                                 >
+                                    <option value="isVisible">נראות (הצגה/הסתרה)</option>
                                     <option value="imageUrl">תמונה ראשית</option>
                                     <option value="category">קטגוריה</option>
                                     <option value="price">מחיר</option>
-                                    <option value="isVisible">נראות (הצגה/הסתרה)</option>
                                 </select>
                             </div>
 
@@ -167,8 +241,8 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                         className="block w-full p-3 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"
                                     >
                                         <option value="">בחר סטטוס...</option>
-                                        <option value="true">הצג באפליקציה</option>
-                                        <option value="false">הסתר מהאפליקציה</option>
+                                        <option value="true">הצג באפליקציה (פעיל)</option>
+                                        <option value="false">הסתר מהאפליקציה (לא פעיל)</option>
                                     </select>
                                 ) : (
                                     <input 
@@ -205,10 +279,10 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                     <div className="relative">
                                          <ActivityCard activity={previewActivity} onShowDetails={() => {}} />
                                          {updateField === 'isVisible' && updateValue === 'false' && (
-                                             <div className="absolute inset-0 bg-gray-800/60 flex items-center justify-center rounded-lg">
-                                                 <div className="bg-white px-4 py-2 rounded-full flex items-center gap-2 font-bold text-gray-800">
-                                                     <EyeOff className="w-4 h-4"/>
-                                                     מוסתר
+                                             <div className="absolute inset-0 bg-gray-800/60 flex items-center justify-center rounded-lg backdrop-blur-[1px]">
+                                                 <div className="bg-white px-4 py-2 rounded-full flex items-center gap-2 font-bold text-gray-800 shadow-lg">
+                                                     <EyeOff className="w-4 h-4 text-red-500"/>
+                                                     יוסתר מהאפליקציה
                                                  </div>
                                              </div>
                                          )}
@@ -230,6 +304,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                 </div>
             </div>
 
+            {/* Results Table */}
             {matchingActivities.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
                     <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
@@ -247,7 +322,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                     <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">פעילות</th>
                                     <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">קטגוריה</th>
                                     <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">מיקום</th>
-                                    <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">מחיר</th>
+                                    <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">גילאים</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">סטטוס</th>
                                 </tr>
                             </thead>
@@ -285,7 +360,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                                 {activity.location}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">
-                                                ₪{activity.price}
+                                                {activity.minAge && activity.maxAge ? `${activity.minAge}-${activity.maxAge}` : '-'}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-left text-xs">
                                                  {activity.isVisible === false ? (
@@ -315,6 +390,7 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                                             <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-4">
                                                                 <div><span className="font-semibold">מדריך:</span> {activity.instructor || '-'}</div>
                                                                 <div><span className="font-semibold">לו"ז:</span> {activity.schedule}</div>
+                                                                <div><span className="font-semibold">מחיר:</span> ₪{activity.price}</div>
                                                                 <div><span className="font-semibold">קישור:</span> <a href={activity.detailsUrl} target="_blank" rel="noreferrer" className="text-sky-600 hover:underline">פתח קישור</a></div>
                                                             </div>
                                                              <div className="flex flex-wrap gap-2 pt-2">
