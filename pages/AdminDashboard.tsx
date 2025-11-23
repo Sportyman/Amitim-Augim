@@ -9,13 +9,14 @@ import {
     Plus, Edit, Trash2, LogOut, Database, Download,
     Search, LayoutGrid, List, Users, Sparkles,
     Menu, X, Image as ImageIcon, ChevronDown, ChevronUp,
-    Home, ArrowRight
+    Home, ArrowRight, Save
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { canEdit, canDelete, canCreate, canManageUsers, getRoleLabel } from '../utils/permissions';
 import BulkUpdateTool from '../components/admin/BulkUpdateTool';
 import UserManagement from '../components/admin/UserManagement';
 import AIEnrichmentTool from '../components/admin/AIEnrichmentTool';
+import DatabaseManagement from '../components/admin/DatabaseManagement';
 
 // --- Auto Logout Hook ---
 const TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes
@@ -57,7 +58,7 @@ const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users' | 'ai'>('list');
+  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users' | 'ai' | 'db'>('list');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedActivityId, setExpandedActivityId] = useState<string | number | null>(null);
   
@@ -66,8 +67,6 @@ const AdminDashboard: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterLocation, setFilterLocation] = useState('all');
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Activate Auto Logout
   useAutoLogout(async () => {
       await logout();
@@ -146,58 +145,6 @@ const AdminDashboard: React.FC = () => {
         console.error("Save error", error);
         throw error;
     }
-  };
-
-  const handleInitialMigration = async () => {
-    if (!canCreate(userRole)) return;
-    
-    if (activities.length > 0) {
-        const proceed = window.confirm(
-            'שים לב: כבר קיימים נתונים במערכת. ייבוא מחדש עלול ליצור כפילויות. האם אתה בטוח שברצונך להמשיך?'
-        );
-        if (!proceed) return;
-    }
-
-    if (window.confirm('פעולה זו תטען את נתוני הבסיס למסד הנתונים. האם להמשיך?')) {
-        setIsLoading(true);
-        try {
-            const response = await fetch('activities.json');
-            const data = await response.json();
-            await dbService.importActivities(data);
-            alert('הנתונים יובאו בהצלחה!');
-            await fetchActivities();
-        } catch (error) {
-            console.error("Migration error", error);
-            alert('שגיאה בייבוא הנתונים');
-            setIsLoading(false);
-        }
-    }
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!canCreate(userRole)) return;
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const json = JSON.parse(e.target?.result as string);
-            if (!Array.isArray(json)) throw new Error("Invalid JSON format.");
-            
-            if (window.confirm(`נמצאו ${json.length} פעילויות. האם לייבא?`)) {
-                setIsLoading(true);
-                await dbService.importActivities(json);
-                await fetchActivities();
-                alert("יובא בהצלחה!");
-            }
-        } catch (error) {
-            alert("שגיאה בקובץ.");
-            setIsLoading(false);
-        }
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-    reader.readAsText(file);
   };
   
   const handleExportData = () => {
@@ -295,6 +242,17 @@ const AdminDashboard: React.FC = () => {
                 </button>
               )}
 
+              {/* Database Management (Import/Reset) */}
+              {canCreate(userRole) && (
+                <button 
+                    onClick={() => { setCurrentView('db'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'db' ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                    <Save className="w-5 h-5" />
+                    ניהול מסד נתונים
+                </button>
+              )}
+
               {/* Only Super Admin can manage users */}
               {canManageUsers(userRole) && (
                   <button 
@@ -358,6 +316,7 @@ const AdminDashboard: React.FC = () => {
                         {currentView === 'list' ? 'רשימת החוגים' : 
                          currentView === 'bulk' ? 'עריכה וניהול קבוצתי' : 
                          currentView === 'ai' ? 'אופטימיזציה ושיפור נתונים' :
+                         currentView === 'db' ? 'ניהול מסד נתונים' :
                          'ניהול צוות'}
                     </h2>
                     {currentView === 'list' && (
@@ -397,6 +356,8 @@ const AdminDashboard: React.FC = () => {
                 <BulkUpdateTool activities={activities} onUpdate={fetchActivities} />
             ) : currentView === 'ai' ? (
                 <AIEnrichmentTool activities={activities} onRefresh={fetchActivities} />
+            ) : currentView === 'db' ? (
+                <DatabaseManagement onRefresh={fetchActivities} />
             ) : (
                 <>
                     {/* Filters Toolbar */}
@@ -438,15 +399,10 @@ const AdminDashboard: React.FC = () => {
                                 <Database className="w-8 h-8 text-sky-500" />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-2">אין נתונים במערכת</h3>
-                            <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6">
-                                <button onClick={handleInitialMigration} className="px-5 py-2 bg-sky-100 text-sky-700 rounded-lg font-medium hover:bg-sky-200 transition-colors">
-                                    טען נתוני דמו
-                                </button>
-                                <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileUpload}/>
-                                <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-                                    ייבא JSON
-                                </button>
-                            </div>
+                            <p className="text-gray-500 mb-6">המאגר ריק כרגע. עבור ל"ניהול מסד נתונים" כדי לייבא קובץ.</p>
+                            <button onClick={() => setCurrentView('db')} className="px-5 py-2 bg-sky-500 text-white rounded-lg font-medium hover:bg-sky-600 transition-colors">
+                                עבור לייבוא נתונים
+                            </button>
                         </div>
                     )}
 
