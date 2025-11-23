@@ -17,7 +17,7 @@ interface BulkUpdateToolProps {
 
 const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate }) => {
     const [searchField, setSearchField] = useState<'title' | 'category' | 'location' | 'age'>('title');
-    const [ageOperator, setAgeOperator] = useState<'max_lt' | 'min_gt'>('max_lt'); // max_lt = kids (max age < X), min_gt = seniors (min age > X)
+    const [ageOperator, setAgeOperator] = useState<'max_lt' | 'min_gt'>('max_lt'); 
     const [searchValue, setSearchValue] = useState('');
     
     const [updateField, setUpdateField] = useState<'imageUrl' | 'category' | 'price' | 'isVisible'>('isVisible');
@@ -49,12 +49,15 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
             }
 
             if (ageOperator === 'max_lt') {
-                // "Hide all under 18" -> We look for activities where the Max Age is <= 18
-                // e.g. "6-9" (max 9) matches. "16-20" (max 20) does NOT match.
-                return max !== undefined && max <= threshold;
+                // "Target audience is YOUNGER than X" (e.g. < 18)
+                // We check if the MAX age of the group is below the threshold.
+                // e.g. Group "6-9" (Max 9) < 18? Yes. -> Selected.
+                return max !== undefined && max < threshold;
             } else if (ageOperator === 'min_gt') {
-                // "Hide all over 66" -> We look for activities where Min Age is >= 66
-                return min !== undefined && min >= threshold;
+                // "Target audience is OLDER than X" (e.g. > 66)
+                // We check if the MIN age of the group is above the threshold.
+                // e.g. Group "70+" (Min 70) > 66? Yes. -> Selected.
+                return min !== undefined && min > threshold;
             }
             return false;
         }
@@ -144,22 +147,28 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                             <label className="text-sm font-bold text-gray-700 mb-2 block">ערך לסינון:</label>
                             
                             {searchField === 'age' ? (
-                                <div className="flex gap-2">
+                                <div className="space-y-3">
                                     <select
                                         value={ageOperator}
                                         onChange={(e) => setAgeOperator(e.target.value as any)}
-                                        className="w-1/2 p-3 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:ring-2 focus:ring-sky-500 outline-none"
+                                        className="w-full p-3 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:ring-2 focus:ring-sky-500 outline-none"
                                     >
-                                        <option value="max_lt">קהל יעד צעיר מ- (מתאים לילדים/נוער)</option>
-                                        <option value="min_gt">קהל יעד מבוגר מ- (מתאים למבוגרים/גיל זהב)</option>
+                                        <option value="max_lt">קהל יעד צעיר מ... (להסתרת חוגי ילדים/נוער)</option>
+                                        <option value="min_gt">קהל יעד מבוגר מ... (להסתרת חוגי גיל שלישי)</option>
                                     </select>
                                     <input 
                                         type="number" 
                                         value={searchValue}
                                         onChange={(e) => setSearchValue(e.target.value)}
-                                        placeholder="גיל (לדוגמה: 18)"
-                                        className="w-1/2 p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
+                                        placeholder="הכנס גיל (לדוגמה: 18)"
+                                        className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
                                     />
+                                    <p className="text-xs text-gray-500">
+                                        {ageOperator === 'max_lt' 
+                                            ? `ימצא חוגים שהגיל המקסימלי שלהם נמוך מ-${searchValue || '...'}` 
+                                            : `ימצא חוגים שהגיל המינימלי שלהם גבוה מ-${searchValue || '...'}`
+                                        }
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="relative">
@@ -172,11 +181,6 @@ const BulkUpdateTool: React.FC<BulkUpdateToolProps> = ({ activities, onUpdate })
                                         className="block w-full p-3 pl-10 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-gray-50"
                                     />
                                 </div>
-                            )}
-                            {searchField === 'age' && (
-                                <p className="text-xs text-gray-400 mt-2">
-                                    * מסנן לפי גיל מינימלי/מקסימלי של החוג
-                                </p>
                             )}
                         </div>
                         

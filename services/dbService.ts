@@ -1,3 +1,4 @@
+
 import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc } from 'firebase/firestore';
 import { Activity, AdminUser, UserRole } from '../types';
@@ -109,9 +110,6 @@ export const dbService = {
       
       // Cache image if provided
       if (activity.imageUrl) {
-          // For new docs, we use the generated ID.
-          // Note: This might be tricky for CSV re-import mapping if the ID changes.
-          // But for manual add, it's fine.
           await dbService.saveImageMapping(docRef.id, activity.imageUrl);
       }
       
@@ -187,6 +185,18 @@ export const dbService = {
             let finalImageUrl = data.imageUrl;
             if (savedImagesMap[finalId]) {
                 finalImageUrl = savedImagesMap[finalId];
+            } else if (data.imageUrl) {
+                // If no saved image but CSV has one, we should save it now?
+                // Ideally yes, but inside batch it's tricky. 
+                // We'll rely on the fact that we write it to 'activities' now,
+                // and user can re-save later or we can do a background write.
+                // However, saving to IMAGES_COLLECTION should ideally happen.
+                // Since we can't easily mix separate collection writes in same batch efficiently without tracking refs,
+                // we will skip saving to cache *during bulk import* to avoid rate limits, 
+                // unless we add it to the batch.
+                // Let's add image cache update to the batch!
+                const imgCacheRef = doc(db, IMAGES_COLLECTION, finalId);
+                chunkBatch.set(imgCacheRef, { imageUrl: data.imageUrl, updatedAt: new Date() }, { merge: true });
             }
 
             const cleanData = sanitizeData({
@@ -203,7 +213,6 @@ export const dbService = {
   },
 
   updateActivitiesBatch: async (activityIds: string[], updates: Partial<Activity>) => {
-      const batch = writeBatch(db);
       const chunkedIds = [];
       for (let i = 0; i < activityIds.length; i += 400) {
           chunkedIds.push(activityIds.slice(i, i + 400));
@@ -214,23 +223,19 @@ export const dbService = {
       for (const chunk of chunkedIds) {
           const chunkBatch = writeBatch(db);
           // Prepare image updates for cache if needed
-          const imageCachePromises: Promise<void>[] = [];
-
+          
           chunk.forEach((id) => {
               const docRef = doc(db, COLLECTION_NAME, id);
               chunkBatch.update(docRef, cleanUpdates);
               
               if (updates.imageUrl) {
-                  imageCachePromises.push(dbService.saveImageMapping(id, updates.imageUrl));
+                  const imgCacheRef = doc(db, IMAGES_COLLECTION, id);
+                  chunkBatch.set(imgCacheRef, { imageUrl: updates.imageUrl, updatedAt: new Date() }, { merge: true });
               }
           });
           
           // Write batch to DB
           await chunkBatch.commit();
-          // Update cache in background
-          if (imageCachePromises.length > 0) {
-              await Promise.all(imageCachePromises);
-          }
       }
   },
   

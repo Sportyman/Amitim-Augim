@@ -101,11 +101,11 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                        <span className="font-bold block text-base">{activity.location}</span>
                        
                        <div className="flex gap-3 mt-2">
-                            <a href={wazeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md transition-colors">
+                            <a href={wazeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md transition-colors" title="ניווט עם Waze">
                                 <NavigationIcon className="w-3 h-3 ml-1" />
                                 Waze
                             </a>
-                             <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-green-600 hover:text-green-800 text-xs font-bold bg-green-50 px-2 py-1 rounded-md transition-colors">
+                             <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-green-600 hover:text-green-800 text-xs font-bold bg-green-50 px-2 py-1 rounded-md transition-colors" title="פתח במפות גוגל">
                                 <LocationIcon className="w-3 h-3 ml-1" />
                                 מפות
                             </a>

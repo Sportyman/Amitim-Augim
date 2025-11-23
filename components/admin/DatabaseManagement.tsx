@@ -49,10 +49,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     // --- Robust CSV Parser ---
     // Handles quotes, newlines within quotes, and commas correctly.
     const robustCSVParser = (text: string): string[][] => {
-        // Remove BOM
         const cleanText = text.trim().replace(/^\uFEFF/, '');
-        
-        // Detect separator: grab first line and count tabs vs commas
         const firstLine = cleanText.split('\n')[0];
         const commaCount = (firstLine.match(/,/g) || []).length;
         const tabCount = (firstLine.match(/\t/g) || []).length;
@@ -104,7 +101,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
         
         const getColumnIndex = (keywords: string[]) => {
-            // Exact match first, then loose match
             let idx = headers.findIndex(h => keywords.includes(h));
             if (idx === -1) {
                 idx = headers.findIndex(h => keywords.some(k => h.includes(k)));
@@ -112,40 +108,23 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             return idx;
         };
 
-        // --- SCHEMA MAPPING based on 'herzliya_master_final_CLASSIFIED.csv' ---
         const colMap = {
             id: getColumnIndex(['activity_id']), 
             name: getColumnIndex(['name']), 
-            
-            // Location
             centerName: getColumnIndex(['center_name']),
             address: getColumnIndex(['center_address_he']),
-            
-            // Contact
             instructor: getColumnIndex(['instructor_name']),
             phone: getColumnIndex(['phone_clean']),
-            
-            // Ages
             ageMin: getColumnIndex(['age_min']),
             ageMax: getColumnIndex(['age_max']),
-            ageList: getColumnIndex(['age_list']),
-            ageGroupList: getColumnIndex(['age_group_list']),
             mainAgeGroup: getColumnIndex(['main_age_group']),
-            
-            // Schedule
             frequency: getColumnIndex(['frequency_clean']),
             meetingsJson: getColumnIndex(['meetings_json']),
             daysList: getColumnIndex(['days_list']),
-            
-            // Price
             price: getColumnIndex(['price_numeric']),
-            
-            // Content
             descRaw: getColumnIndex(['description_raw']),
             descAuto: getColumnIndex(['description_auto']),
             groupRaw: getColumnIndex(['group_raw']),
-            
-            // Categorization & Meta
             categoriesApp: getColumnIndex(['categories_app']),
             tags: getColumnIndex(['tags']),
             source: getColumnIndex(['source']),
@@ -154,7 +133,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
         const activities: Activity[] = [];
 
-        // Iterate rows (skip header)
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (row.length < 2 && !row[0]) continue;
@@ -162,42 +140,35 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const getVal = (idx: number) => {
                 if (idx === -1 || !row[idx]) return '';
                 let val = row[idx].trim();
-                // Clean outer quotes if strictly wrapped
                 if (val.startsWith('"') && val.endsWith('"')) {
                     val = val.substring(1, val.length - 1);
                 }
                 return val.replace(/""/g, '"');
             };
 
-            // 1. Basic Info
             const activityId = getVal(colMap.id) || `gen_${i}_${Date.now()}`;
             const title = getVal(colMap.name);
-            if (!title) continue; // Skip invalid rows
+            if (!title) continue;
 
-            // 2. Location
             const center = getVal(colMap.centerName);
             const address = getVal(colMap.address);
             let fullLocation = center;
             if (address && address !== center) fullLocation += `, ${address}`;
             if (!fullLocation) fullLocation = 'הרצליה';
 
-            // 3. Price
             const priceVal = parseFloat(getVal(colMap.price));
             const price = (!isNaN(priceVal)) ? priceVal : 0;
 
-            // 4. Description (Raw preferred, fallback to Auto)
             let description = getVal(colMap.descRaw);
             if (!description || description === 'nan' || description.length < 5) {
                 description = getVal(colMap.descAuto);
             }
             if (description === 'nan') description = '';
 
-            // 5. Age Logic
             const minAge = parseFloat(getVal(colMap.ageMin));
             const maxAge = parseFloat(getVal(colMap.ageMax));
             const mainGroup = getVal(colMap.mainAgeGroup);
             
-            // Display text for age
             let ageGroupDisplay = mainGroup;
             if (!ageGroupDisplay || ageGroupDisplay === 'nan') {
                 if (!isNaN(minAge)) {
@@ -207,18 +178,19 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 }
             }
 
-            // 6. Schedule Construction (JSON Authority)
+            // --- SCHEDULE PARSING FIXES ---
             let scheduleStr = '';
-            const freq = getVal(colMap.frequency);
+            const freqVal = getVal(colMap.frequency);
             const meetingsRaw = getVal(colMap.meetingsJson);
+            const daysRaw = getVal(colMap.daysList);
 
+            let jsonSuccess = false;
             if (meetingsRaw && meetingsRaw !== '[]' && meetingsRaw !== 'nan') {
                 try {
-                    // Normalize quotes for JSON parsing (Python style ['a'] to ["a"])
                     let jsonStr = meetingsRaw.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true');
                     const meetings = JSON.parse(jsonStr);
 
-                    if (Array.isArray(meetings)) {
+                    if (Array.isArray(meetings) && meetings.length > 0) {
                         const parts = meetings.map((m: any) => {
                             const day = m.day || '';
                             const start = m.start || '';
@@ -227,76 +199,95 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                             return `יום ${day}'`;
                         });
                         scheduleStr = parts.join(' | ');
+                        jsonSuccess = true;
                     }
                 } catch (e) {
-                    console.warn("Failed parsing meetings JSON", title, meetingsRaw);
+                    // JSON failed
                 }
             }
 
-            // Fallback schedule if JSON failed or empty
-            if (!scheduleStr) {
-                 const days = getVal(colMap.daysList);
-                 if (days && days !== 'nan') {
-                     // Clean Python list format ["ה'", "ב'"] -> ה', ב'
-                     const cleanDays = days.replace(/[\[\]"']/g, '').trim();
-                     if (cleanDays) {
-                         // Format nicer: add "יום" prefix if it's just letters
-                         const dayParts = cleanDays.split(',').map(d => {
-                             const trimmed = d.trim();
-                             return trimmed.length <= 3 ? `יום ${trimmed}` : trimmed;
-                         });
-                         scheduleStr = dayParts.join(', ');
-                     }
-                 }
-            }
+            if (!jsonSuccess) {
+                let displayFreq = '';
+                let displayDays = '';
 
-            // Prepend Frequency with cleanup (1.0 -> פעם בשבוע)
-            if (freq && freq !== 'nan') {
-                let displayFreq = freq;
-                if (freq === '1.0' || freq === '1') displayFreq = 'פעם בשבוע';
-                else if (freq === '2.0' || freq === '2') displayFreq = 'פעמיים בשבוע';
-                else if (freq === '3.0' || freq === '3') displayFreq = '3 פעמים בשבוע';
-                else displayFreq = freq.replace('.0', ''); // Remove decimal
+                // Clean Frequency: Convert "2.0" to "פעמיים בשבוע"
+                if (freqVal && freqVal !== 'nan') {
+                    // Parse float to handle "2.0", "2", "1.0" etc.
+                    const freqNum = parseFloat(freqVal);
+                    if (!isNaN(freqNum)) {
+                        const roundedFreq = Math.round(freqNum);
+                        switch (roundedFreq) {
+                            case 1: displayFreq = 'פעם בשבוע'; break;
+                            case 2: displayFreq = 'פעמיים בשבוע'; break;
+                            case 3: displayFreq = '3 פעמים בשבוע'; break;
+                            case 4: displayFreq = '4 פעמים בשבוע'; break;
+                            case 5: displayFreq = '5 פעמים בשבוע'; break;
+                            case 6: displayFreq = '6 פעמים בשבוע'; break;
+                            default: displayFreq = `${roundedFreq} פעמים בשבוע`;
+                        }
+                    } else {
+                        displayFreq = freqVal;
+                    }
+                }
 
-                scheduleStr = scheduleStr ? `${displayFreq}, ${scheduleStr}` : displayFreq;
+                // Clean Days: Handle "['א'', 'ב'']" or "['א', 'ב']" or "['Thu']"
+                if (daysRaw && daysRaw !== 'nan' && daysRaw !== '[]') {
+                    // 1. Remove brackets
+                    const cleanBrackets = daysRaw.replace(/[\[\]]/g, '');
+                    // 2. Split by comma
+                    const parts = cleanBrackets.split(',');
+                    // 3. Clean each part
+                    const cleanParts = parts.map(p => {
+                        let s = p.trim();
+                        // Remove surrounding quotes if present (e.g. "א'" -> א')
+                        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+                            s = s.slice(1, -1);
+                        }
+                        // Unescape backslashes if python escaped them (e.g. 'א\'')
+                        s = s.replace(/\\/g, '');
+                        return s.trim();
+                    }).filter(s => s.length > 0);
+                    
+                    displayDays = cleanParts.join(', ');
+                }
+
+                if (displayFreq && displayDays) {
+                    scheduleStr = `${displayFreq}. ימים: ${displayDays}`;
+                } else if (displayFreq) {
+                    scheduleStr = displayFreq;
+                } else if (displayDays) {
+                    scheduleStr = `ימים: ${displayDays}`;
+                }
             }
             
             if (!scheduleStr) scheduleStr = 'לפרטים נוספים';
 
-            // 7. Categories & Tags (Parsing Python-style lists)
             const parseListStr = (str: string): string[] => {
                 if (!str || str === 'nan' || str === '[]') return [];
                 try {
-                    // Simple regex parser for ['a', 'b'] style strings
                     const matches = str.match(/'([^']*)'/g);
                     if (matches) {
                         return matches.map(m => m.replace(/'/g, '').trim());
                     }
-                    // Try JSON
                     return JSON.parse(str.replace(/'/g, '"'));
                 } catch (e) {
-                    return [str.replace(/[\[\]']/g, '')]; // Fallback cleanup
+                    return [str.replace(/[\[\]']/g, '')];
                 }
             };
 
             const categories = parseListStr(getVal(colMap.categoriesApp));
-            let appCategory = 'ספורט'; // Default
+            let appCategory = 'ספורט';
             if (categories.length > 0) {
-                // Map specific terms to known app constants if needed, or take first
                 appCategory = categories[0];
             }
 
             const tags = parseListStr(getVal(colMap.tags));
-
-            // 8. Links & Contact
             const regLink = getVal(colMap.regLink);
             const sourceLink = getVal(colMap.source);
             const finalLink = (regLink && regLink !== 'nan') ? regLink : (sourceLink && sourceLink !== 'nan' ? sourceLink : '#');
-            
             const instructor = getVal(colMap.instructor);
             const phone = getVal(colMap.phone);
 
-            // Construct Activity Object
             const activity: Activity = {
                 id: activityId,
                 title: title,
@@ -313,8 +304,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 detailsUrl: finalLink,
                 minAge: !isNaN(minAge) ? minAge : undefined,
                 maxAge: !isNaN(maxAge) ? maxAge : undefined,
-                tags: tags, // Store for search
-                ai_tags: tags, // Compatible with existing search logic
+                tags: tags,
+                ai_tags: tags,
                 isVisible: true,
                 createdAt: new Date()
             };
@@ -340,7 +331,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 const dataToImport = parseCSV(content);
                 
                 if (dataToImport.length === 0) {
-                    alert('לא נמצאו נתונים תקינים בקובץ. וודא שהכותרות תואמות לפורמט החדש (activity_id, name, etc).');
+                    alert('לא נמצאו נתונים תקינים בקובץ.');
                     return;
                 }
 

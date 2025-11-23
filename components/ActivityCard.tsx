@@ -67,7 +67,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
                 <span className="truncate">{activity.ageGroup}</span>
             </div>
 
-             {/* Schedule - Removed truncate to show full details */}
+             {/* Schedule */}
              <div className="flex items-start" title="זמנים">
                 <ClockIcon className="w-3.5 h-3.5 ml-2 text-gray-400 flex-shrink-0 mt-0.5" />
                 <span className="line-clamp-2">{activity.schedule}</span>
