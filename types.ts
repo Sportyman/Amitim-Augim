@@ -3,7 +3,11 @@ import React from 'react';
 export interface Category {
   id: string;
   name: string;
-  icon: React.ComponentType<{ className?: string }>;
+  // icon is now optional because we store iconId in DB, map it in UI
+  icon?: React.ComponentType<{ className?: string }>; 
+  iconId?: string; // "sport", "art", "emoji:⚽", etc.
+  isVisible?: boolean;
+  order?: number;
 }
 
 export interface Activity {

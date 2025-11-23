@@ -9,7 +9,7 @@ import {
     Plus, Edit, Trash2, LogOut, Database, Download,
     Search, LayoutGrid, List, Users, Sparkles,
     Menu, X, Image as ImageIcon, ChevronDown, ChevronUp,
-    Home, ArrowRight, Save, Eye, EyeOff
+    Home, ArrowRight, Save, Eye, EyeOff, Tags
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { canEdit, canDelete, canCreate, canManageUsers, getRoleLabel } from '../utils/permissions';
@@ -17,6 +17,7 @@ import BulkUpdateTool from '../components/admin/BulkUpdateTool';
 import UserManagement from '../components/admin/UserManagement';
 import AIEnrichmentTool from '../components/admin/AIEnrichmentTool';
 import DatabaseManagement from '../components/admin/DatabaseManagement';
+import CategoryManagement from '../components/admin/CategoryManagement';
 import { formatSchedule } from '../utils/helpers';
 
 // --- Auto Logout Hook ---
@@ -59,7 +60,7 @@ const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users' | 'ai' | 'db'>('list');
+  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users' | 'ai' | 'db' | 'categories'>('list');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedActivityId, setExpandedActivityId] = useState<string | number | null>(null);
   
@@ -223,13 +224,23 @@ const AdminDashboard: React.FC = () => {
               
               {/* Only admins and super admins can do bulk updates */}
               {canCreate(userRole) && (
-                <button 
-                    onClick={() => { setCurrentView('bulk'); setIsMobileMenuOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'bulk' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
-                >
-                    <LayoutGrid className="w-5 h-5" />
-                    ניהול קבוצתי
-                </button>
+                <>
+                    <button 
+                        onClick={() => { setCurrentView('bulk'); setIsMobileMenuOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'bulk' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        <LayoutGrid className="w-5 h-5" />
+                        ניהול קבוצתי
+                    </button>
+
+                    <button 
+                        onClick={() => { setCurrentView('categories'); setIsMobileMenuOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'categories' ? 'bg-teal-50 text-teal-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        <Tags className="w-5 h-5" />
+                        ניהול קטגוריות
+                    </button>
+                </>
               )}
 
               {/* AI Enrichment Tool */}
@@ -318,6 +329,7 @@ const AdminDashboard: React.FC = () => {
                          currentView === 'bulk' ? 'עריכה וניהול קבוצתי' : 
                          currentView === 'ai' ? 'אופטימיזציה ושיפור נתונים' :
                          currentView === 'db' ? 'ניהול מסד נתונים' :
+                         currentView === 'categories' ? 'ניהול קטגוריות' :
                          'ניהול צוות'}
                     </h2>
                     {currentView === 'list' && (
@@ -359,6 +371,8 @@ const AdminDashboard: React.FC = () => {
                 <AIEnrichmentTool activities={activities} onRefresh={fetchActivities} />
             ) : currentView === 'db' ? (
                 <DatabaseManagement onRefresh={fetchActivities} />
+            ) : currentView === 'categories' ? (
+                <CategoryManagement />
             ) : (
                 <>
                     {/* Filters Toolbar */}

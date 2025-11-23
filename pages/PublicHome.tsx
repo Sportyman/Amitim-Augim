@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from '../components/Header';
 import CategoryFilter from '../components/CategoryFilter';
@@ -9,15 +10,16 @@ import MultiSelectFilter from '../components/MultiSelectFilter';
 import AgeRangeFilter from '../components/AgeRangeFilter';
 import PriceRangeFilter from '../components/PriceRangeFilter';
 import ActivityModal from '../components/ActivityModal';
-import { CATEGORIES } from '../constants';
-import { Activity, ViewMode } from '../types';
+import { CATEGORIES as DEFAULT_CATS } from '../constants'; // Fallback
+import { Activity, ViewMode, Category } from '../types';
 import { findRelatedKeywords } from '../services/geminiService';
-import { SlidersIcon, ChevronDownIcon, ChevronUpIcon } from '../components/icons';
+import { SlidersIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import { dbService } from '../services/dbService';
 import { parseAgeGroupToRange } from '../utils/helpers';
 
 const PublicHome: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATS);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -34,6 +36,11 @@ const PublicHome: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
         try {
+            // Load Categories
+            const fetchedCategories = await dbService.getCategories();
+            setCategories(fetchedCategories);
+
+            // Load Activities
             const data = await dbService.getAllActivities();
             if (data.length === 0) {
                  const res = await fetch('activities.json');
@@ -43,7 +50,7 @@ const PublicHome: React.FC = () => {
                 setActivities(data);
             }
         } catch (error) {
-            console.error("Error fetching activities:", error);
+            console.error("Error fetching data:", error);
             fetch('activities.json')
                 .then(res => res.json())
                 .then(data => setActivities(data))
@@ -127,9 +134,15 @@ const PublicHome: React.FC = () => {
       const aiSummary = (activity.ai_summary || '').toLowerCase();
       const instructor = (activity.instructor || '').toLowerCase();
 
+      // Category Filter Logic
+      // We need to find the name of the selected category ID to compare with activity.category string
+      const selectedCategoryNames = selectedCategories.map(id => 
+          categories.find(c => c.id === id)?.name.toLowerCase()
+      ).filter(Boolean);
+
       const categoryMatch =
         selectedCategories.length === 0 ||
-        selectedCategories.includes(CATEGORIES.find(c => c.name === activity.category)?.id || '');
+        selectedCategoryNames.some(name => category === name);
 
       const searchKeywords = [searchTerm.toLowerCase(), ...relatedKeywords.map(k => k.toLowerCase())];
       const termMatch = searchTerm.trim() === '' || searchKeywords.some(keyword => 
@@ -170,7 +183,7 @@ const PublicHome: React.FC = () => {
 
       return categoryMatch && termMatch && cityMatch && locationMatch && ageMatch && priceMatch;
     });
-  }, [selectedCategories, searchTerm, relatedKeywords, activities, selectedCities, selectedLocations, userAge, priceRange]);
+  }, [selectedCategories, searchTerm, relatedKeywords, activities, selectedCities, selectedLocations, userAge, priceRange, categories]);
 
   const renderContent = () => {
     if (isLoadingActivities) {
@@ -252,7 +265,7 @@ const PublicHome: React.FC = () => {
 
             <section className="space-y-8 max-w-5xl mx-auto">
                 <CategoryFilter
-                    categories={CATEGORIES}
+                    categories={categories}
                     selectedCategories={selectedCategories}
                     onCategoryToggle={handleCategoryToggle}
                 />
@@ -269,7 +282,7 @@ const PublicHome: React.FC = () => {
                     >
                         <SlidersIcon className="w-4 h-4" />
                         אפשרויות חיפוש נוספות
-                        {isAdvancedSearchOpen ? <ChevronUpIcon className="w-4 h-4"/> : <ChevronDownIcon className="w-4 h-4"/>}
+                        {isAdvancedSearchOpen ? <ChevronUp className="w-4 h-4"/> : <ChevronDown className="w-4 h-4"/>}
                     </button>
                 </div>
                 <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isAdvancedSearchOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>

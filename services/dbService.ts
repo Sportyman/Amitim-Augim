@@ -1,11 +1,13 @@
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc } from 'firebase/firestore';
-import { Activity, AdminUser, UserRole } from '../types';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc, orderBy } from 'firebase/firestore';
+import { Activity, AdminUser, UserRole, Category } from '../types';
+import { DEFAULT_CATEGORIES } from '../constants';
 
 const COLLECTION_NAME = 'activities';
 const USERS_COLLECTION = 'users';
-const IMAGES_COLLECTION = 'activity_images'; // Separate collection to persist image URLs
+const IMAGES_COLLECTION = 'activity_images';
+const CATEGORIES_COLLECTION = 'categories';
 
 // Helper to remove undefined values which Firestore hates
 const sanitizeData = (data: any) => {
@@ -136,8 +138,6 @@ const updateActivity = async (id: string, updates: Partial<Activity>) => {
 const deleteActivity = async (id: string) => {
   try {
     await deleteDoc(doc(db, COLLECTION_NAME, id));
-    // NOTE: We intentionally DO NOT delete from IMAGES_COLLECTION here
-    // to allow restoration if the CSV is re-imported with the same ID.
   } catch (error) {
     console.error("Error deleting activity: ", error);
     throw error;
@@ -147,10 +147,8 @@ const deleteActivity = async (id: string) => {
 const importActivities = async (activities: Activity[]) => {
   const collectionRef = collection(db, COLLECTION_NAME);
   
-  // 1. Load existing image mappings
   const savedImagesMap = await getSavedImagesMap();
 
-  // Process in chunks of 400 (Firestore batch limit is 500)
   const chunks = [];
   for (let i = 0; i < activities.length; i += 400) {
       chunks.push(activities.slice(i, i + 400));
@@ -162,7 +160,6 @@ const importActivities = async (activities: Activity[]) => {
       chunk.forEach((activity) => {
           const { id, ...data } = activity;
           
-          // UPSERT LOGIC: Use ID from CSV as doc ID if available
           let docRef;
           let finalId = String(id);
 
@@ -173,12 +170,10 @@ const importActivities = async (activities: Activity[]) => {
                finalId = docRef.id;
           }
           
-          // RESTORE IMAGE LOGIC:
           let finalImageUrl = data.imageUrl;
           if (savedImagesMap[finalId]) {
               finalImageUrl = savedImagesMap[finalId];
           } else if (data.imageUrl) {
-              // Add image cache update to the batch
               const imgCacheRef = doc(db, IMAGES_COLLECTION, finalId);
               chunkBatch.set(imgCacheRef, { imageUrl: data.imageUrl, updatedAt: new Date() }, { merge: true });
           }
@@ -288,6 +283,58 @@ const removeAdminUser = async (email: string) => {
     }
 };
 
+// --- Category Management ---
+
+const getCategories = async (): Promise<Category[]> => {
+    try {
+        const q = query(collection(db, CATEGORIES_COLLECTION), orderBy('order'));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            // Seed default categories if empty
+            const batch = writeBatch(db);
+            DEFAULT_CATEGORIES.forEach(cat => {
+                const ref = doc(db, CATEGORIES_COLLECTION, cat.id);
+                batch.set(ref, cat);
+            });
+            await batch.commit();
+            return DEFAULT_CATEGORIES;
+        }
+
+        return snapshot.docs.map(d => d.data() as Category);
+    } catch (error) {
+        console.error("Error getting categories:", error);
+        return DEFAULT_CATEGORIES;
+    }
+};
+
+const saveCategory = async (category: Category) => {
+    try {
+        await setDoc(doc(db, CATEGORIES_COLLECTION, category.id), category, { merge: true });
+    } catch (error) {
+        console.error("Error saving category:", error);
+        throw error;
+    }
+};
+
+const deleteCategory = async (id: string) => {
+    try {
+        await deleteDoc(doc(db, CATEGORIES_COLLECTION, id));
+    } catch (error) {
+        console.error("Error deleting category:", error);
+        throw error;
+    }
+};
+
+const updateCategoriesOrder = async (categories: Category[]) => {
+    const batch = writeBatch(db);
+    categories.forEach((cat, index) => {
+        const ref = doc(db, CATEGORIES_COLLECTION, cat.id);
+        batch.update(ref, { order: index + 1 });
+    });
+    await batch.commit();
+};
+
 export const dbService = {
   getSavedImagesMap,
   saveImageMapping,
@@ -302,5 +349,9 @@ export const dbService = {
   getUserRole,
   getAllAdmins,
   addAdminUser,
-  removeAdminUser
+  removeAdminUser,
+  getCategories,
+  saveCategory,
+  deleteCategory,
+  updateCategoriesOrder
 };
