@@ -37,7 +37,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
     // --- Robust CSV Parser ---
     const robustCSVParser = (text: string): string[][] => {
-        // Remove BOM and other invisible characters from the start
+        // Remove BOM
         const cleanText = text.trim().replace(/^\uFEFF/, '');
         
         const rows: string[][] = [];
@@ -86,137 +86,168 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
         
         const getColumnIndex = (keywords: string[]) => {
-            return headers.findIndex(h => keywords.some(k => h === k || h.includes(k)));
+            return headers.findIndex(h => keywords.some(k => h === k));
         };
 
-        // Updated Map based strictly on the User's "Clean" columns request
-        // Ignored RAW columns: group_raw, notes_raw, description_raw, original_text
+        // --- NEW SCHEMA MAPPING ---
         const colMap = {
-            id: getColumnIndex(['activity_id', 'מזהה']),
-            name: getColumnIndex(['name', 'שם', 'activity_name']), // Clean Name
+            id: getColumnIndex(['id']), // Clean ID
+            name: getColumnIndex(['activity_name']), // Display Name
             
-            // Clean Location
+            // Location
             centerName: getColumnIndex(['center_name']),
-            centerAddress: getColumnIndex(['center_address_he']),
+            address: getColumnIndex(['address']),
             
-            // Clean Price
-            price: getColumnIndex(['price_numeric']),
+            // Contact
+            instructor: getColumnIndex(['instructor_name']),
+            phone: getColumnIndex(['phone']),
             
-            // Clean Age
-            ageMin: getColumnIndex(['age_min']),
-            ageMax: getColumnIndex(['age_max']),
-            ageList: getColumnIndex(['age_list']),
+            // Ages
+            ageText: getColumnIndex(['ages']),
+            ageGroup: getColumnIndex(['age_group']), // Children, Youth, etc.
             
-            // Clean Schedule
-            meetingDays: getColumnIndex(['meeting_days_all_he']),
-            meetingCount: getColumnIndex(['meetings_count']),
+            // Schedule
+            daysList: getColumnIndex(['days_list']),
+            meetingsJson: getColumnIndex(['meetings_json']), // Single source of truth for schedule
             frequency: getColumnIndex(['frequency_clean']),
             
-            // Clean Contact/Details
-            phone: getColumnIndex(['phone']),
-            descriptionAI: getColumnIndex(['description_ai_enhanced'])
+            // Price
+            price: getColumnIndex(['price']),
+            
+            // Categorization
+            appCategories: getColumnIndex(['app_categories']),
+            tags: getColumnIndex(['tags'])
         };
 
         const activities: Activity[] = [];
 
-        // Iterate rows (skip header). No merging logic required as per instructions.
+        // Iterate rows (skip header)
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (row.length < 2 && !row[0]) continue;
 
             const getVal = (idx: number) => {
                 if (idx === -1 || !row[idx]) return '';
-                return row[idx].trim().replace(/^"|"$/g, '').replace(/""/g, '"');
+                // Clean quotes and trim
+                let val = row[idx].trim();
+                if (val.startsWith('"') && val.endsWith('"')) {
+                    val = val.substring(1, val.length - 1);
+                }
+                return val.replace(/""/g, '"');
             };
 
-            const rawId = getVal(colMap.id);
-            const activityId = rawId || `gen_${i}_${Date.now()}`; 
-            
+            // 1. ID & Title
+            const activityId = getVal(colMap.id) || `gen_${i}_${Date.now()}`;
             const title = getVal(colMap.name);
-            if (!title) continue; // Skip invalid rows
+            if (!title) continue;
 
-            // --- Price ---
-            const priceStr = getVal(colMap.price).replace(/[^\d.]/g, '');
-            const priceVal = parseFloat(priceStr);
-            const price = (!isNaN(priceVal) && priceVal > 0) ? priceVal : 0;
-
-            // --- Location ---
+            // 2. Location
             const center = getVal(colMap.centerName);
-            const addr = getVal(colMap.centerAddress);
+            const address = getVal(colMap.address);
             let fullLocation = center;
-            if (addr && !fullLocation.includes(addr)) fullLocation += `, ${addr}`;
+            if (address && address !== center) fullLocation += `, ${address}`;
             if (!fullLocation) fullLocation = 'הרצליה';
 
-            // --- Description & Instructor ---
-            // Using the AI Enhanced description as the main description source
-            let description = getVal(colMap.descriptionAI);
-            const phone = getVal(colMap.phone);
-            
-            // Append phone if not present
-            if (phone && !description.includes(phone)) {
-                description += `\nטלפון לבירורים: ${phone}`;
-            }
+            // 3. Price
+            const priceVal = parseFloat(getVal(colMap.price));
+            const price = (!isNaN(priceVal)) ? priceVal : 0;
 
-            // --- Ages ---
-            const minAge = parseFloat(getVal(colMap.ageMin));
-            const maxAge = parseFloat(getVal(colMap.ageMax));
-            
-            let ageGroup = '';
-            if (!isNaN(minAge)) {
-                if (minAge >= 60) ageGroup = 'גיל שלישי 60+';
-                else if (minAge >= 18) ageGroup = !isNaN(maxAge) ? `מבוגרים (${minAge}-${maxAge})` : `מבוגרים (${minAge}+)`;
-                else if (!isNaN(maxAge) && maxAge <= 6) ageGroup = `גיל רך (${minAge}-${maxAge})`;
-                else if (!isNaN(maxAge)) ageGroup = `ילדים ונוער (${minAge}-${maxAge})`;
-                else ageGroup = `${minAge}+`;
-            } else {
-                ageGroup = 'רב גילאי';
-            }
-
-            // --- Schedule ---
-            // Using meeting_days_all_he + frequency_clean
-            const days = getVal(colMap.meetingDays);
+            // 4. Schedule (Parsing JSON)
+            let scheduleStr = '';
             const freq = getVal(colMap.frequency);
+            const meetingsRaw = getVal(colMap.meetingsJson);
             
-            let schedule = '';
-            if (freq) schedule += freq;
-            if (days) {
-                if (schedule) schedule += ' | ';
-                schedule += days;
+            try {
+                if (meetingsRaw) {
+                    // Fix potential double quotes in JSON string from CSV export
+                    const cleanJson = meetingsRaw.replace(/""/g, '"'); 
+                    const meetings = JSON.parse(cleanJson);
+                    
+                    if (Array.isArray(meetings)) {
+                        const parts = meetings.map((m: any) => {
+                            return `יום ${m.day}' ${m.start}-${m.end}`;
+                        });
+                        scheduleStr = parts.join(' | ');
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to parse meetings JSON for", title, meetingsRaw);
             }
-            if (!schedule) schedule = 'לפרטים נוספים';
 
-            // --- Category Inference (Basic) ---
-            let category = 'ספורט'; 
-            const txt = (title + ' ' + description + ' ' + center).toLowerCase();
-            
-            if (txt.includes('יצירה') || txt.includes('אומנות') || txt.includes('ציור') || txt.includes('קרמיקה') || txt.includes('פיסול') || txt.includes('תכשיט')) category = 'אומנות';
-            else if (txt.includes('מוזיקה') || txt.includes('גיטרה') || txt.includes('פסנתר') || txt.includes('שירה') || txt.includes('זמר')) category = 'מוזיקה';
-            else if (txt.includes('מחשבים') || txt.includes('טכנולוגיה') || txt.includes('סייבר') || txt.includes('רובוטיקה') || txt.includes('הייטק') || txt.includes('גיימינג')) category = 'טכנולוגיה';
-            else if (txt.includes('גמלאים') || txt.includes('גיל הזהב') || txt.includes('מועדון') || txt.includes('הרצאה') || txt.includes('ברידג')) category = 'קהילה';
-            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה') || txt.includes('מדע')) category = 'העשרה ולימוד';
-            else if (txt.includes('ריקוד') || txt.includes('מחול') || txt.includes('בלט') || txt.includes('זומבה') || txt.includes('היפ')) category = 'ריקוד ומחול';
-            else if (txt.includes('בישול') || txt.includes('אפייה')) category = 'בישול';
-            else if (txt.includes('צהרון') || txt.includes('קייטנ') || txt.includes('מעון')) category = 'צהרון';
-            
-            if (!isNaN(minAge) && minAge >= 60) category = 'גיל הזהב';
+            // Fallback to frequency if JSON parse failed or empty
+            if (!scheduleStr) {
+                scheduleStr = freq || 'לפרטים נוספים';
+            } else if (freq && !scheduleStr.includes(freq)) {
+                 // Prepend frequency if available (e.g. "פעמיים בשבוע | יום א...")
+                 scheduleStr = `${freq} | ${scheduleStr}`;
+            }
 
+            // 5. Age Group
+            const groupType = getVal(colMap.ageGroup); // ילדים, נוער...
+            const specificAges = getVal(colMap.ageText); // 7-12
+            let displayAge = groupType;
+            if (specificAges) displayAge += ` (${specificAges})`;
+            
+            // Attempt to parse min/max for filtering from the specific range
+            let minAge = 0, maxAge = 120;
+            const rangeMatch = specificAges.match(/(\d+)-(\d+)/);
+            if (rangeMatch) {
+                minAge = parseInt(rangeMatch[1]);
+                maxAge = parseInt(rangeMatch[2]);
+            } else if (groupType.includes('גיל הזהב')) {
+                minAge = 60;
+            }
+
+            // 6. Categories & Tags
+            const catRaw = getVal(colMap.appCategories); // e.g. "['ספורט', 'ילדים']"
+            let appCategory = 'ספורט'; // Default
+            let aiTags: string[] = [];
+            
+            // Parse categories list
+            try {
+                 const cats = JSON.parse(catRaw.replace(/'/g, '"')); // Handle single quotes often in python lists
+                 if (Array.isArray(cats) && cats.length > 0) {
+                     appCategory = cats[0]; // Take the first one as primary
+                 }
+            } catch (e) {
+                // Fallback basic text matching if JSON parse fails
+                if (catRaw.includes('אומנות')) appCategory = 'אומנות';
+                else if (catRaw.includes('מוזיקה')) appCategory = 'מוזיקה';
+                else if (catRaw.includes('גיל הזהב')) appCategory = 'גיל הזהב';
+            }
+
+            // Parse tags
+            const tagsRaw = getVal(colMap.tags);
+            try {
+                const parsedTags = JSON.parse(tagsRaw.replace(/'/g, '"'));
+                if (Array.isArray(parsedTags)) aiTags = parsedTags;
+            } catch (e) {
+                if (tagsRaw) aiTags = tagsRaw.split(',').map(t => t.trim());
+            }
+
+            // 7. Instructor & Phone
+            const instructor = getVal(colMap.instructor);
+            const phone = getVal(colMap.phone);
+
+            // --- Construct Object ---
             const activity: Activity = {
                 id: activityId,
                 title: title,
-                // We use the title as group name if no specific group logic is provided, 
-                // or we could leave it empty. For now, mapping title to it if needed or leaving undefined.
-                groupName: '', 
-                category: category,
-                description: description,
-                imageUrl: '', // No image column in provided list
+                // Using Age Group as the secondary title (group name)
+                groupName: groupType !== 'רב גילאי' ? groupType : '', 
+                category: appCategory,
+                description: '', // We don't use RAW description, relying on title/tags/details
+                imageUrl: '', // Placeholder
                 location: fullLocation,
                 price: price,
-                ageGroup: ageGroup,
-                schedule: schedule,
-                instructor: null, // User explicitly didn't list instructor column in Clean list
+                ageGroup: displayAge || 'לכל המשפחה',
+                schedule: scheduleStr,
+                instructor: instructor || null,
+                phone: phone || null,
                 detailsUrl: '#',
-                minAge: !isNaN(minAge) ? minAge : undefined,
-                maxAge: !isNaN(maxAge) ? maxAge : undefined,
+                minAge: minAge,
+                maxAge: maxAge,
+                ai_tags: aiTags, // Search tags
                 createdAt: new Date()
             };
 
@@ -227,11 +258,10 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     };
 
     const processFile = (file: File) => {
-        const isCSV = file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
-        const isJSON = file.name.toLowerCase().endsWith('.json');
+        const isCSV = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
 
-        if (!isCSV && !isJSON) {
-            alert('אנא בחר קובץ מסוג CSV או JSON בלבד.');
+        if (!isCSV) {
+            alert('אנא בחר קובץ CSV בלבד.');
             return;
         }
 
@@ -239,22 +269,14 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         reader.onload = async (e) => {
             try {
                 const content = e.target?.result as string;
-                let dataToImport: Activity[] = [];
-
-                if (isJSON) {
-                    const json = JSON.parse(content);
-                    if (!Array.isArray(json)) throw new Error("קובץ ה-JSON חייב להכיל מערך של חוגים.");
-                    dataToImport = json;
-                } else {
-                    dataToImport = parseCSV(content);
-                }
+                const dataToImport = parseCSV(content);
                 
                 if (dataToImport.length === 0) {
-                    alert('לא נמצאו נתונים תקינים בקובץ. וודא שהכותרות תואמות לפורמט הרצוי.');
+                    alert('לא נמצאו נתונים תקינים בקובץ. וודא שהכותרות תואמות לפורמט החדש (activity_name, id...).');
                     return;
                 }
 
-                const confirmMsg = `נמצאו ${dataToImport.length} חוגים (ללא מיזוג כפילויות) בקובץ.\n\nהאם לייבא אותם למערכת?`;
+                const confirmMsg = `נמצאו ${dataToImport.length} חוגים בקובץ.\n\nהאם לייבא אותם למערכת?`;
 
                 if (window.confirm(confirmMsg)) {
                     setIsUploading(true);
@@ -264,7 +286,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 }
             } catch (error) {
                 console.error(error);
-                alert('שגיאה בקריאת הקובץ או בייבוא למסד הנתונים. וודא שהפורמט תקין.');
+                alert('שגיאה בקריאת הקובץ.');
             } finally {
                 setIsUploading(false);
                 if (fileInputRef.current) fileInputRef.current.value = '';
@@ -309,8 +331,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         <Upload className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-gray-800 text-lg">ייבוא נתונים חדשים</h3>
-                        <p className="text-sm text-gray-500">גרירת קובץ Excel (CSV) או JSON</p>
+                        <h3 className="font-bold text-gray-800 text-lg">ייבוא נתונים (פורמט חדש)</h3>
+                        <p className="text-sm text-gray-500">טען את קובץ ה-CSV המלא והמעובד</p>
                     </div>
                 </div>
 
@@ -331,16 +353,16 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         <FileText className={`w-12 h-12 transition-colors ${isDragActive ? 'text-blue-600' : 'text-orange-400'}`} />
                     </div>
                     <p className="text-blue-900 font-bold text-lg pointer-events-none">
-                        {isDragActive ? 'שחרר את הקובץ כאן...' : 'גרור לכאן קובץ או לחץ לבחירה'}
+                        {isDragActive ? 'שחרר את הקובץ כאן...' : 'גרור לכאן קובץ CSV'}
                     </p>
                     <p className="text-gray-500 text-sm mt-2 pointer-events-none">
-                        תומך בפורמט CSV מעובד (עמודות נקיות בלבד).
+                        תומך בעמודות: id, activity_name, meetings_json, phone, etc.
                     </p>
                     <input 
                         type="file" 
                         ref={fileInputRef} 
                         className="hidden" 
-                        accept=".json,.csv,.txt" 
+                        accept=".csv,.txt" 
                         onChange={handleFileUpload} 
                     />
                 </div>
@@ -348,7 +370,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 {isUploading && (
                     <div className="mt-6 flex flex-col items-center justify-center gap-2 text-blue-600 animate-in fade-in">
                         <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                        <span className="font-medium">מעבד נתונים, אנא המתן...</span>
+                        <span className="font-medium">מעבד נתונים...</span>
                     </div>
                 )}
             </div>
@@ -360,15 +382,15 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         <AlertTriangle className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-red-800 text-lg">אזור סכנה (ניקוי נתונים)</h3>
-                        <p className="text-sm text-red-600/80">פעולות אלו הן בלתי הפיכות</p>
+                        <h3 className="font-bold text-red-800 text-lg">איפוס מסד נתונים</h3>
+                        <p className="text-sm text-red-600/80">חובה לבצע לפני טעינת קובץ במבנה חדש!</p>
                     </div>
                 </div>
 
                 <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-red-100">
                     <div>
                         <h4 className="font-bold text-gray-800">מחיקת כל החוגים</h4>
-                        <p className="text-sm text-gray-500">מוחק את כל הרשומות ממסד הנתונים הנוכחי.</p>
+                        <p className="text-sm text-gray-500">מוחק את כל הרשומות הקיימות.</p>
                     </div>
                     <button 
                         onClick={handleDeleteAll}

@@ -21,9 +21,13 @@ export interface Activity {
   
   schedule: string;
   instructor: string | null;
+  phone?: string | null; // New explicit phone field
   detailsUrl: string;
+  
+  // AI & Search Metadata
   ai_summary?: string;
-  ai_tags?: string[];
+  ai_tags?: string[]; // Synonyms and search tags
+  tags?: string[]; // From the new CSV 'tags' column
   
   // New structured fields for better search/filtering
   minAge?: number;

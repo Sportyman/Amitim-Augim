@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Activity } from '../types';
 import { CENTER_ADDRESSES } from '../constants';
@@ -23,9 +22,12 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
-  // Extract phone number if exists in description
-  const phoneMatch = activity.description.match(/05\d-?\d{7}|0\d-?\d{7}/);
-  const phoneNumber = phoneMatch ? phoneMatch[0] : null;
+  // Use the clean phone field if available, otherwise fallback to description extraction
+  let phoneNumber = activity.phone;
+  if (!phoneNumber) {
+      const phoneMatch = activity.description.match(/05\d-?\d{7}|0\d-?\d{7}/);
+      phoneNumber = phoneMatch ? phoneMatch[0] : null;
+  }
 
   // WhatsApp Logic
   let whatsappUrl = null;
@@ -37,10 +39,9 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
       }
   }
 
-  // Resolve exact address
+  // Resolve exact address (already in location for new schema, but keep fallback)
   const centerName = activity.location.split(',')[0].trim();
-  const specificAddress = CENTER_ADDRESSES[centerName];
-  const navigationQuery = specificAddress ? `${specificAddress}` : activity.location;
+  const navigationQuery = activity.location; 
   const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(navigationQuery)}&navigate=yes`;
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navigationQuery)}`;
 
@@ -75,7 +76,6 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white shadow-black drop-shadow-md">{activity.title}</h2>
                 
-                {/* Show Group Name here too if exists */}
                 {activity.groupName && (
                     <p className="text-white/90 font-medium mt-1 text-lg shadow-black drop-shadow-sm">
                         {activity.groupName}
@@ -92,8 +92,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                 <div className="flex items-start text-gray-700 col-span-1 sm:col-span-2">
                    <LocationIcon className="w-5 h-5 ml-3 text-sky-500 flex-shrink-0 mt-0.5" />
                    <div>
-                       <span className="font-bold block">{activity.location}</span>
-                       {specificAddress && <span className="text-gray-500 text-xs block mt-1">{specificAddress}</span>}
+                       <span className="font-bold block text-base">{activity.location}</span>
                        
                        <div className="flex gap-3 mt-2">
                             <a href={wazeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md transition-colors">
@@ -108,12 +107,11 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                    </div>
                 </div>
                 
-                {/* Show instructor only if known (not null/empty) */}
                 {activity.instructor && (
                     <div className="flex items-center text-gray-700 col-span-1 sm:col-span-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
                        <UserIcon className="w-5 h-5 ml-3 text-sky-500" />
-                       <span className="font-bold text-gray-900">מדריך/ה: </span>
-                       <span className="mr-2 text-gray-800">{activity.instructor}</span>
+                       <span className="font-bold text-gray-900 ml-2">מדריך/ה: </span>
+                       <span className="text-gray-800">{activity.instructor}</span>
                     </div>
                 )}
 
@@ -134,15 +132,17 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
             </div>
 
             {/* Description / AI Summary */}
-            <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">אודות הפעילות</h3>
-                <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">
-                    {activity.ai_summary || activity.description || "לפעילות זו אין תיאור נוסף כרגע."}
-                </p>
-            </div>
+            {activity.description && (
+                <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">פרטים נוספים</h3>
+                    <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">
+                        {activity.description}
+                    </p>
+                </div>
+            )}
             
-            {/* AI Tags */}
-            {activity.ai_tags && activity.ai_tags.length > 0 && (
+            {/* Search Tags */}
+            {(activity.ai_tags && activity.ai_tags.length > 0) && (
               <div className="flex flex-wrap gap-2">
                 {activity.ai_tags.map((tag, idx) => (
                   <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
