@@ -1,7 +1,7 @@
 
 import { db, auth } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc, orderBy, limit, where, Timestamp } from 'firebase/firestore';
-import { Activity, AdminUser, UserRole, Category, AuditLog, AppSettings } from '../types';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc, orderBy, limit, where, Timestamp, increment } from 'firebase/firestore';
+import { Activity, AdminUser, UserRole, Category, AuditLog, AppSettings, SiteStats } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 
 const COLLECTION_NAME = 'activities';
@@ -11,6 +11,7 @@ const CATEGORIES_COLLECTION = 'categories';
 const AUDIT_COLLECTION = 'audit_logs';
 const SETTINGS_COLLECTION = 'settings';
 const APP_SETTINGS_DOC = 'app_config';
+const STATS_DOC = 'general_stats';
 
 // Helper to remove undefined values which Firestore hates
 const sanitizeData = (data: any) => {
@@ -119,6 +120,7 @@ const getAllActivities = async (): Promise<Activity[]> => {
           ai_tags: Array.isArray(data.ai_tags) ? data.ai_tags : [],
           minAge: data.minAge,
           maxAge: data.maxAge,
+          views: data.views || 0,
           ...data
       } as Activity;
     });
@@ -132,6 +134,7 @@ const addActivity = async (activity: Omit<Activity, 'id'>) => {
   try {
     const cleanActivity = sanitizeData({
       ...activity,
+      views: 0,
       createdAt: new Date()
     });
     const docRef = await addDoc(collection(db, COLLECTION_NAME), cleanActivity);
@@ -204,7 +207,7 @@ const importActivities = async (activities: Activity[]) => {
   // 1. Get existing images to avoid overwriting with blank/broken URLs if user manually set them
   const savedImagesMap = await getSavedImagesMap();
 
-  // 2. Get existing IDs to decide on persistence (isVisible)
+  // 2. Get existing IDs to decide on persistence (isVisible, views)
   // We fetch only IDs to save bandwidth
   const existingDocsSnapshot = await getDocs(collectionRef);
   const existingIds = new Set(existingDocsSnapshot.docs.map(doc => doc.id));
@@ -258,15 +261,15 @@ const importActivities = async (activities: Activity[]) => {
               createdAt: data.createdAt || new Date() 
           });
 
-          // Handle isVisible persistence:
-          // If document exists, do NOT overwrite isVisible unless explicitly provided in CSV (which is undefined here usually)
-          // If document is new, set isVisible = true
+          // Handle persistence:
           if (existingIds.has(finalId)) {
-              // Update: remove isVisible from payload so it doesn't reset
+              // Do NOT overwrite isVisible or views on existing records
               delete cleanData.isVisible; 
+              delete cleanData.views;
           } else {
-              // Create: Default to visible
+              // Create: Default values
               cleanData.isVisible = true;
+              cleanData.views = 0;
           }
 
           chunkBatch.set(docRef, cleanData, { merge: true }); 
@@ -438,6 +441,46 @@ const updateCategoriesOrder = async (categories: Category[]) => {
     await batch.commit();
 };
 
+// --- Analytics & Stats ---
+
+const trackUniqueVisit = async () => {
+    try {
+        const docRef = doc(db, SETTINGS_COLLECTION, STATS_DOC);
+        await setDoc(docRef, {
+            totalVisits: increment(1),
+            lastUpdated: new Date()
+        }, { merge: true });
+    } catch (e) {
+        console.error("Failed to track visit", e);
+    }
+};
+
+const incrementActivityView = async (activityId: string | number) => {
+    try {
+        const ref = doc(db, COLLECTION_NAME, String(activityId));
+        await updateDoc(ref, {
+            views: increment(1)
+        });
+    } catch (e) {
+        // Silent fail for analytics to not interrupt user flow
+        console.warn("Failed to increment view count", e);
+    }
+};
+
+const getSiteStats = async (): Promise<SiteStats> => {
+    try {
+        const docRef = doc(db, SETTINGS_COLLECTION, STATS_DOC);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+            return snap.data() as SiteStats;
+        }
+        return { totalVisits: 0 };
+    } catch (e) {
+        console.error("Failed to get stats", e);
+        return { totalVisits: 0 };
+    }
+};
+
 // --- Audit & Maintenance ---
 
 const getAuditLogs = async (limitCount = 50): Promise<AuditLog[]> => {
@@ -559,5 +602,8 @@ export const dbService = {
   deleteOldLogs,
   getCollectionStats,
   getAppSettings,
-  updateAppSettings
+  updateAppSettings,
+  trackUniqueVisit,
+  incrementActivityView,
+  getSiteStats
 };

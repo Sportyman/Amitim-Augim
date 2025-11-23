@@ -44,6 +44,9 @@ export interface Activity {
   gender?: 'male' | 'female' | 'mixed';
   level?: 'beginner' | 'advanced' | 'all';
   
+  // Analytics
+  views?: number; // Number of times clicked/viewed
+
   createdAt?: any; // For DB sorting
 }
 
@@ -74,4 +77,9 @@ export interface AuditLog {
 // --- Global App Settings ---
 export interface AppSettings {
   enableColorfulCategories: boolean;
+}
+
+export interface SiteStats {
+    totalVisits: number;
+    lastUpdated?: any;
 }

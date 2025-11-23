@@ -9,7 +9,7 @@ import {
     Plus, Edit, Trash2, LogOut, Database, Download,
     Search, LayoutGrid, List, Users, Sparkles,
     Menu, X, Image as ImageIcon, ChevronDown, ChevronUp,
-    Home, ArrowRight, Save, Eye, EyeOff, Tags, Settings
+    Home, ArrowRight, Save, Eye, EyeOff, Tags, Settings, BarChart2
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { canEdit, canDelete, canCreate, canManageUsers, getRoleLabel } from '../utils/permissions';
@@ -64,6 +64,7 @@ const AdminDashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users' | 'ai' | 'db' | 'categories' | 'settings'>('list');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedActivityId, setExpandedActivityId] = useState<string | number | null>(null);
+  const [siteVisits, setSiteVisits] = useState<number>(0);
   
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,16 +82,20 @@ const AdminDashboard: React.FC = () => {
       navigate('/login');
       return;
     }
-    fetchActivities();
+    fetchData();
   }, [user, isAdmin, navigate]);
 
-  const fetchActivities = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     try {
-        const data = await dbService.getAllActivities();
+        const [data, stats] = await Promise.all([
+            dbService.getAllActivities(),
+            dbService.getSiteStats()
+        ]);
         setActivities(data);
+        setSiteVisits(stats.totalVisits || 0);
     } catch (error) {
-        console.error("Failed to fetch activities", error);
+        console.error("Failed to fetch dashboard data", error);
     } finally {
         setIsLoading(false);
     }
@@ -143,7 +148,7 @@ const AdminDashboard: React.FC = () => {
             await dbService.addActivity(data);
         }
         setIsFormOpen(false);
-        fetchActivities();
+        fetchData();
     } catch (error) {
         console.error("Save error", error);
         throw error;
@@ -316,6 +321,12 @@ const AdminDashboard: React.FC = () => {
             
              {/* Navigation Buttons */}
             <div className="flex justify-end gap-3 mb-6">
+                {/* Analytics Badge */}
+                <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full shadow-sm border border-emerald-200 mr-auto">
+                    <BarChart2 className="w-4 h-4" />
+                    <span className="text-sm font-bold">כניסות ייחודיות לאתר: {siteVisits.toLocaleString()}</span>
+                </div>
+
                 <button 
                     onClick={() => navigate(-1)} 
                     className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-full shadow-sm hover:bg-gray-50 transition-all text-sm font-medium border border-gray-200"
@@ -378,11 +389,11 @@ const AdminDashboard: React.FC = () => {
             {currentView === 'users' ? (
                 <UserManagement />
             ) : currentView === 'bulk' ? (
-                <BulkUpdateTool activities={activities} onUpdate={fetchActivities} />
+                <BulkUpdateTool activities={activities} onUpdate={fetchData} />
             ) : currentView === 'ai' ? (
-                <AIEnrichmentTool activities={activities} onRefresh={fetchActivities} />
+                <AIEnrichmentTool activities={activities} onRefresh={fetchData} />
             ) : currentView === 'db' ? (
-                <DatabaseManagement onRefresh={fetchActivities} />
+                <DatabaseManagement onRefresh={fetchData} />
             ) : currentView === 'categories' ? (
                 <CategoryManagement />
             ) : currentView === 'settings' ? (
@@ -596,6 +607,7 @@ const AdminDashboard: React.FC = () => {
                                                                 <div><span className="font-semibold">לו"ז:</span> {formatSchedule(activity.schedule)}</div>
                                                                 <div><span className="font-semibold">מזהה:</span> {activity.id}</div>
                                                                 {activity.minAge && <div><span className="font-semibold">גילאים:</span> {activity.minAge}-{activity.maxAge}</div>}
+                                                                <div><span className="font-semibold">צפיות:</span> {activity.views || 0}</div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -620,7 +632,7 @@ const AdminDashboard: React.FC = () => {
             allActivities={activities}
             onSubmit={handleFormSubmit} 
             onCancel={() => setIsFormOpen(false)} 
-            onRefresh={fetchActivities}
+            onRefresh={fetchData}
         />
       )}
     </div>

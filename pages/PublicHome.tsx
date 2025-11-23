@@ -13,9 +13,11 @@ import ActivityModal from '../components/ActivityModal';
 import { CATEGORIES as DEFAULT_CATS } from '../constants'; // Fallback
 import { Activity, ViewMode, Category, AppSettings } from '../types';
 import { findRelatedKeywords } from '../services/geminiService';
-import { SlidersIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { SlidersIcon, ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { dbService } from '../services/dbService';
 import { parseAgeGroupToRange } from '../utils/helpers';
+
+type SortOption = 'popularity' | 'price-asc' | 'price-desc' | 'alphabetical' | 'alphabetical-desc';
 
 const PublicHome: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -33,10 +35,20 @@ const PublicHome: React.FC = () => {
   const [userAge, setUserAge] = useState<string>('');
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>('popularity');
   
   useEffect(() => {
     const loadData = async () => {
         try {
+            // Analytics: Track Unique Visit (Local Storage check -> DB increment)
+            const lastVisit = localStorage.getItem('amitim_last_visit');
+            const now = Date.now();
+            // If never visited or visited more than 24 hours ago
+            if (!lastVisit || (now - parseInt(lastVisit)) > 24 * 60 * 60 * 1000) {
+                await dbService.trackUniqueVisit();
+                localStorage.setItem('amitim_last_visit', now.toString());
+            }
+
             // Load Settings
             const appSettings = await dbService.getAppSettings();
             setSettings(appSettings);
@@ -66,6 +78,12 @@ const PublicHome: React.FC = () => {
     };
     loadData();
   }, []);
+
+  const handleActivityClick = (activity: Activity) => {
+      setSelectedActivity(activity);
+      // Analytics: Increment view count
+      dbService.incrementActivityView(activity.id);
+  };
 
   const uniqueCities = useMemo(() => {
     // Use explicit city field if available, fallback to legacy parse
@@ -128,7 +146,7 @@ const PublicHome: React.FC = () => {
   }, [searchTerm]);
 
   const filteredActivities = useMemo(() => {
-    return activities.filter((activity) => {
+    const filtered = activities.filter((activity) => {
       // 1. Visibility Filter
       if (activity.isVisible === false) return false;
 
@@ -194,7 +212,26 @@ const PublicHome: React.FC = () => {
 
       return categoryMatch && termMatch && cityMatch && locationMatch && ageMatch && priceMatch;
     });
-  }, [selectedCategories, searchTerm, relatedKeywords, activities, selectedCities, selectedLocations, userAge, priceRange, categories]);
+
+    // Sort Logic
+    return filtered.sort((a, b) => {
+        switch (sortOption) {
+            case 'price-asc':
+                return a.price - b.price;
+            case 'price-desc':
+                return b.price - a.price;
+            case 'alphabetical':
+                return a.title.localeCompare(b.title);
+            case 'alphabetical-desc':
+                return b.title.localeCompare(a.title);
+            case 'popularity':
+            default:
+                // Default to views descending, fallback to ID/creation
+                return (b.views || 0) - (a.views || 0);
+        }
+    });
+
+  }, [selectedCategories, searchTerm, relatedKeywords, activities, selectedCities, selectedLocations, userAge, priceRange, categories, sortOption]);
 
   const renderContent = () => {
     if (isLoadingActivities) {
@@ -238,7 +275,7 @@ const PublicHome: React.FC = () => {
                   <ActivityCard 
                     key={activity.id} 
                     activity={activity} 
-                    onShowDetails={() => setSelectedActivity(activity)}
+                    onShowDetails={() => handleActivityClick(activity)}
                   />
               ))}
           </div>
@@ -251,7 +288,7 @@ const PublicHome: React.FC = () => {
           <ActivityListItem 
             key={activity.id} 
             activity={activity} 
-            onShowDetails={() => setSelectedActivity(activity)}
+            onShowDetails={() => handleActivityClick(activity)}
           />
         ))}
       </div>
@@ -332,11 +369,31 @@ const PublicHome: React.FC = () => {
         </div>
 
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <p className="text-gray-600">
               נמצאו <span className="font-bold text-sky-600 text-lg">{filteredActivities.length}</span> תוצאות
             </p>
-            <ViewSwitcher currentView={viewMode} onViewChange={setViewMode} />
+            
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+                {/* Sorting Dropdown */}
+                <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2 shadow-sm w-full sm:w-auto">
+                    <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs text-gray-500 whitespace-nowrap">סידור לפי:</span>
+                    <select 
+                        value={sortOption}
+                        onChange={(e) => setSortOption(e.target.value as SortOption)}
+                        className="bg-transparent text-sm font-semibold text-gray-700 outline-none flex-1 cursor-pointer"
+                    >
+                        <option value="popularity">פופולריות</option>
+                        <option value="price-asc">מחיר (מהנמוך לגבוה)</option>
+                        <option value="price-desc">מחיר (מהגבוה לנמוך)</option>
+                        <option value="alphabetical">שם (א-ת)</option>
+                        <option value="alphabetical-desc">שם (ת-א)</option>
+                    </select>
+                </div>
+
+                <ViewSwitcher currentView={viewMode} onViewChange={setViewMode} />
+            </div>
           </div>
           {renderContent()}
         </section>
@@ -344,7 +401,7 @@ const PublicHome: React.FC = () => {
       <footer className="bg-white border-t border-gray-200 mt-auto py-8">
         <div className="container mx-auto px-4 text-center">
             <p className="text-gray-500 text-sm">
-                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.1.0
+                &copy; {new Date().getFullYear()} Amitim Activity Finder. כל הזכויות שמורות. <span className="text-gray-300 mx-2">|</span> v1.2.0
             </p>
         </div>
       </footer>
