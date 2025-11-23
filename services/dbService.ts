@@ -56,9 +56,9 @@ export const dbService = {
   },
 
   importActivities: async (activities: Activity[]) => {
-    const batch = writeBatch(db);
     const collectionRef = collection(db, COLLECTION_NAME);
 
+    // Process in chunks of 400 (Firestore batch limit is 500)
     const chunks = [];
     for (let i = 0; i < activities.length; i += 400) {
         chunks.push(activities.slice(i, i + 400));
@@ -68,11 +68,23 @@ export const dbService = {
         const chunkBatch = writeBatch(db);
         chunk.forEach((activity) => {
             const { id, ...data } = activity;
-            const newDocRef = doc(collectionRef);
-            chunkBatch.set(newDocRef, {
+            
+            // UPSERT LOGIC:
+            // If we have a specific string ID (like "act_000001"), use it as the Document ID.
+            // This ensures that re-importing the same file updates existing records instead of duplicating.
+            let docRef;
+            if (id && String(id).trim().length > 0) {
+                 docRef = doc(collectionRef, String(id));
+            } else {
+                 docRef = doc(collectionRef); // Generate new ID if missing
+            }
+            
+            chunkBatch.set(docRef, {
                 ...data,
-                createdAt: new Date()
-            });
+                updatedAt: new Date(),
+                // Preserve createdAt if existing, or set new one
+                createdAt: data.createdAt || new Date() 
+            }, { merge: true }); 
         });
         await chunkBatch.commit();
     }
