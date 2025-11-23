@@ -37,48 +37,40 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     };
 
     // --- Robust CSV Parser ---
-    // Handles quotes, newlines within quotes, and commas correctly.
     const robustCSVParser = (text: string): string[][] => {
+        // Remove BOM if present
+        const cleanText = text.replace(/^\uFEFF/, '');
+        
         const rows: string[][] = [];
         let currentRow: string[] = [];
         let currentField = '';
         let inQuotes = false;
         
-        // Naive detection of separator based on first line
-        const firstLine = text.split('\n')[0];
-        const separator = firstLine.includes('\t') ? '\t' : ',';
-
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            const nextChar = text[i + 1];
+        for (let i = 0; i < cleanText.length; i++) {
+            const char = cleanText[i];
+            const nextChar = cleanText[i + 1];
             
             if (char === '"') {
                 if (inQuotes && nextChar === '"') {
-                    // Escaped quote "" -> "
                     currentField += '"';
                     i++; 
                 } else {
-                    // Toggle quote state
                     inQuotes = !inQuotes;
                 }
-            } else if (char === separator && !inQuotes) {
-                // Field separator
+            } else if ((char === ',' || char === '\t') && !inQuotes) {
                 currentRow.push(currentField);
                 currentField = '';
             } else if ((char === '\n' || char === '\r') && !inQuotes) {
-                // Row separator
-                if (char === '\r' && nextChar === '\n') i++; // Skip \n of \r\n
+                if (char === '\r' && nextChar === '\n') i++;
                 currentRow.push(currentField);
                 rows.push(currentRow);
                 currentRow = [];
                 currentField = '';
             } else {
-                // Regular character
                 currentField += char;
             }
         }
         
-        // Add last field/row if exists
         if (currentField || currentRow.length) {
             currentRow.push(currentField);
             rows.push(currentRow);
@@ -91,75 +83,65 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         const rows = robustCSVParser(csvText);
         if (rows.length < 2) return [];
 
-        // Parse headers (first row)
-        const headers = rows[0].map(h => h.trim().toLowerCase());
+        // Parse headers
+        const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
         
-        // Helper to map headers to indices
         const getColumnIndex = (keywords: string[]) => {
             return headers.findIndex(h => keywords.some(k => h === k || h.includes(k)));
         };
 
-        // Map based on the NEW detailed CSV structure provided by user
+        // New mapping based on provided CSV structure
         const colMap = {
             id: getColumnIndex(['activity_id']),
-            title: getColumnIndex(['activity_name']),
-            groupName: getColumnIndex(['group_raw']),
+            title: getColumnIndex(['activity_name', 'title']),
+            groupName: getColumnIndex(['group_raw', 'group_name']),
             
-            // Age
             ageFrom: getColumnIndex(['age_from']),
             ageTo: getColumnIndex(['age_to']),
             
-            // Schedule
             dayHe: getColumnIndex(['day_he']),
             daysAll: getColumnIndex(['meeting_days_all_he']),
             startTime: getColumnIndex(['start_time']),
             endTime: getColumnIndex(['end_time']),
             frequency: getColumnIndex(['frequency_raw']),
             
-            // Pricing
             price: getColumnIndex(['price_numeric', 'price_raw']),
             
-            // Contact & Location
             instructor: getColumnIndex(['instructor_name']),
-            phone: getColumnIndex(['phone']),
+            phone: getColumnIndex(['phone', 'instructor_phone']),
+            
             locationName: getColumnIndex(['center_name']),
             address: getColumnIndex(['center_address_he']),
             
-            // Details
             description: getColumnIndex(['description_raw']),
             notes: getColumnIndex(['notes_raw']),
             source: getColumnIndex(['source', 'registration_link'])
         };
 
-        // Temporary Map to merge rows with same ID
         const activityMap = new Map<string, any>();
 
-        // Iterate rows (skip header)
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            
+            if (row.length < 2 && !row[0]) continue;
+
             const getVal = (idx: number) => {
                 if (idx === -1 || !row[idx]) return '';
-                return row[idx].trim();
+                return row[idx].trim().replace(/^"|"$/g, '').replace(/""/g, '"');
             };
 
             const rawId = getVal(colMap.id);
-            // Fallback ID if missing in CSV
             const activityId = rawId || `generated_${i}`; 
-            
             const title = getVal(colMap.title);
-            // If new activity but no title, skip. If existing activity in map, we might just be adding schedule info.
+            
             if (!title && !activityMap.has(activityId)) continue; 
 
-            // Get existing object or create new one
             const existing = activityMap.get(activityId) || {
                 id: activityId,
                 title: title,
-                category: 'ספורט', // Default, refined later
+                category: 'ספורט',
                 price: 0,
                 imageUrl: '',
                 createdAt: new Date(),
-                // Accumulators for merging
                 scheduleParts: [], 
                 rawLocations: [],
                 rawInstructors: [],
@@ -168,27 +150,24 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 rawAddresses: []
             };
 
-            // --- Merge Logic: Prefer non-empty new values ---
             if (title) existing.title = title;
             
             const groupName = getVal(colMap.groupName);
             if (groupName) existing.groupName = groupName;
 
-            const priceVal = parseFloat(getVal(colMap.price));
+            const priceStr = getVal(colMap.price).replace(/[^\d.]/g, '');
+            const priceVal = parseFloat(priceStr);
             if (!isNaN(priceVal) && priceVal > 0) existing.price = priceVal;
 
-            // Location Construction
+            // Location
             const locName = getVal(colMap.locationName);
             const locAddr = getVal(colMap.address);
-            
             if (locName && !existing.rawLocations.includes(locName)) existing.rawLocations.push(locName);
             if (locAddr && !existing.rawAddresses.includes(locAddr)) existing.rawAddresses.push(locAddr);
 
-            // Instructor
+            // Instructor & Phone
             const inst = getVal(colMap.instructor);
             if (inst && !existing.rawInstructors.includes(inst)) existing.rawInstructors.push(inst);
-
-            // Phone
             const phone = getVal(colMap.phone);
             if (phone && !existing.rawPhones.includes(phone)) existing.rawPhones.push(phone);
             
@@ -199,15 +178,12 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             if (notes && notes !== desc) fullDesc += `\n${notes}`;
             if (fullDesc && !existing.rawDescriptions.includes(fullDesc)) existing.rawDescriptions.push(fullDesc);
 
-            // Link
             const link = getVal(colMap.source);
             if (link) existing.detailsUrl = link;
 
-            // Age Logic
+            // Age
             const ageFrom = parseFloat(getVal(colMap.ageFrom));
             const ageTo = parseFloat(getVal(colMap.ageTo));
-            
-            // Update min/max if valid numbers found
             if (!isNaN(ageFrom)) {
                 if (existing.minAge === undefined || ageFrom < existing.minAge) existing.minAge = ageFrom;
             }
@@ -215,53 +191,39 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 if (existing.maxAge === undefined || ageTo > existing.maxAge) existing.maxAge = ageTo;
             }
 
-            // Schedule Logic
+            // Schedule
             const dayHe = getVal(colMap.dayHe);
             const daysAll = getVal(colMap.daysAll);
             const startT = getVal(colMap.startTime);
             const endT = getVal(colMap.endTime);
             const freq = getVal(colMap.frequency);
 
-            // If we have a specific day and time for this row
             if (dayHe && startT) {
-                let timeStr = startT;
-                if (endT) timeStr += `-${endT}`;
-                existing.scheduleParts.push(`יום ${dayHe}' ${timeStr}`);
-            } 
-            // If we have summary days but no specific time on this row (or just general row)
-            else if (daysAll && !existing.scheduleParts.some((s: string) => s.includes(daysAll))) {
-                // Only add if not covered by specific rows or if its a summary line
-                // Ideally we want the specific times. Let's store it, but specific rows take precedence in final cleanup.
+                let part = `יום ${dayHe}' ${startT}`;
+                if (endT) part += `-${endT}`;
+                if (!existing.scheduleParts.includes(part)) existing.scheduleParts.push(part);
+            } else if (daysAll && !existing.scheduleParts.some((s: string) => s.includes(daysAll))) {
+                 if (!startT) existing.rawSummaryDays = daysAll;
             }
-
-            // Store raw summary just in case
-            if (daysAll && !existing.rawSummaryDays) existing.rawSummaryDays = daysAll;
+            if (freq && !existing.frequency) existing.frequency = freq;
 
             activityMap.set(activityId, existing);
         }
 
-        // Final pass to clean up merged objects and create the Activity interface
-        const activities: Activity[] = Array.from(activityMap.values()).map((a: any) => {
-            // 1. Instructor
+        return Array.from(activityMap.values()).map((a: any) => {
             const uniqueInst = [...new Set(a.rawInstructors)].filter(Boolean).join(', ');
-            
-            // 2. Phone
             const uniquePhones = [...new Set(a.rawPhones)].filter(Boolean).join(', ');
             
-            // 3. Location
             const center = a.rawLocations[0] || 'הרצליה';
             const addr = a.rawAddresses[0] || '';
             let fullLocation = center;
             if (addr && !fullLocation.includes(addr)) fullLocation += `, ${addr}`;
 
-            // 4. Description
-            // Take the longest unique description found
             let bestDesc = a.rawDescriptions.sort((a: string, b: string) => b.length - a.length)[0] || '';
             if (uniquePhones && !bestDesc.includes(uniquePhones)) {
                 bestDesc += `\nטלפון לבירורים: ${uniquePhones}`;
             }
 
-             // 5. Age Group String Construction
              let ageGroup = a.groupName || '';
              if (a.minAge !== undefined) {
                  if (a.minAge >= 60) ageGroup = 'גיל שלישי 60+';
@@ -272,32 +234,33 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
              }
              if (!ageGroup) ageGroup = 'רב גילאי';
 
-             // 6. Schedule Construction
-             // If we collected specific "Day + Time" parts, use them.
              let finalSchedule = '';
              const uniqueSchedParts = [...new Set(a.scheduleParts)];
-             
              if (uniqueSchedParts.length > 0) {
                  finalSchedule = uniqueSchedParts.join(' | ');
              } else if (a.rawSummaryDays) {
-                 // Fallback to just days if no times found
                  finalSchedule = `ימים: ${a.rawSummaryDays}`;
+             } else if (a.frequency) {
+                 finalSchedule = a.frequency;
              } else {
                  finalSchedule = 'לפרטים נוספים';
              }
 
-            // 7. Category Inference
-            let category = 'ספורט'; // Default
-            const txt = (a.title + ' ' + a.groupName).toLowerCase();
-            if (txt.includes('יצירה') || txt.includes('אומנות') || txt.includes('ציור') || txt.includes('קרמיקה') || txt.includes('פיסול') || txt.includes('תכשיט')) category = 'אומנות';
+            // Categorization
+            let category = 'ספורט'; 
+            const txt = (a.title + ' ' + a.groupName + ' ' + (a.rawLocations[0] || '')).toLowerCase();
+            
+            if (txt.includes('יצירה') || txt.includes('אומנות') || txt.includes('ציור') || txt.includes('קרמיקה') || txt.includes('פיסול') || txt.includes('תכשיט') || txt.includes('נגרות') || txt.includes('גילוף')) category = 'אומנות';
             else if (txt.includes('מוזיקה') || txt.includes('גיטרה') || txt.includes('פסנתר') || txt.includes('תווים') || txt.includes('שירה') || txt.includes('זמר')) category = 'מוזיקה';
-            else if (txt.includes('מחשבים') || txt.includes('טכנולוגיה') || txt.includes('סייבר') || txt.includes('רובוטיקה') || txt.includes('הייטק')) category = 'טכנולוגיה';
+            else if (txt.includes('מחשבים') || txt.includes('טכנולוגיה') || txt.includes('סייבר') || txt.includes('רובוטיקה') || txt.includes('הייטק') || txt.includes('גיימינג') || txt.includes('מייקר')) category = 'טכנולוגיה';
             else if (txt.includes('גמלאים') || txt.includes('גיל הזהב') || txt.includes('מועדון') || txt.includes('הרצאה') || txt.includes('ברידג')) category = 'קהילה';
-            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה') || txt.includes('מדע') || txt.includes('וטרינריה')) category = 'העשרה ולימוד';
-            else if (txt.includes('ריקוד') || txt.includes('מחול') || txt.includes('בלט') || txt.includes('זומבה') || txt.includes('היפ')) category = 'ריקוד ומחול';
+            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה') || txt.includes('מדע') || txt.includes('וטרינריה') || txt.includes('שחמט') || txt.includes('מבוכים')) category = 'העשרה ולימוד';
+            else if (txt.includes('ריקוד') || txt.includes('מחול') || txt.includes('בלט') || txt.includes('זומבה') || txt.includes('היפ') || txt.includes('תנועה')) category = 'ריקוד ומחול';
             else if (txt.includes('בישול') || txt.includes('אפייה') || txt.includes('קונדיטוריה')) category = 'בישול';
             else if (txt.includes('צהרון') || txt.includes('קייטנ') || txt.includes('מעון')) category = 'צהרון';
             
+            if (a.minAge >= 60) category = 'גיל הזהב';
+
             return {
                 id: a.id,
                 title: a.title,
@@ -311,18 +274,15 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 schedule: finalSchedule,
                 instructor: uniqueInst || null,
                 detailsUrl: a.detailsUrl || '#',
-                // Use undefined if NaN so the sanitizer removes it
                 minAge: a.minAge !== undefined ? a.minAge : undefined,
                 maxAge: a.maxAge !== undefined ? a.maxAge : undefined,
                 createdAt: a.createdAt
             };
         });
-
-        return activities;
     };
 
     const processFile = (file: File) => {
-        const isCSV = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
+        const isCSV = file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
         const isJSON = file.name.toLowerCase().endsWith('.json');
 
         if (!isCSV && !isJSON) {
@@ -349,7 +309,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                     return;
                 }
 
-                const confirmMsg = `נמצאו ${dataToImport.length} חוגים (ייחודיים) בקובץ.\n\nשימו לב: המערכת איחדה שורות כפולות לפי מזהה החוג.\n\nהאם לייבא?`;
+                const confirmMsg = `נמצאו ${dataToImport.length} חוגים (ייחודיים) בקובץ.\n\nהאם לייבא אותם למערכת?`;
 
                 if (window.confirm(confirmMsg)) {
                     setIsUploading(true);
@@ -373,7 +333,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         if (file) processFile(file);
     };
 
-    // --- Drag and Drop Handlers ---
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
