@@ -112,11 +112,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             source: getColumnIndex(['source', 'registration_link'])
         };
 
-        // Debugging: Check if ID column was found
-        if (colMap.id === -1) {
-            console.warn("Could not find 'activity_id' column. Headers found:", headers);
-        }
-
         const activityMap = new Map<string, any>();
 
         for (let i = 1; i < rows.length; i++) {
@@ -243,10 +238,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
              }
              if (!ageGroup) ageGroup = 'רב גילאי';
 
-             // Schedule Merging Logic
              let finalSchedule = '';
              
-             // Start with frequency if available (e.g. "פעמיים בשבוע")
              if (a.frequency) {
                  finalSchedule = a.frequency;
              }
@@ -276,7 +269,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             else if (txt.includes('בישול') || txt.includes('אפייה') || txt.includes('קונדיטוריה')) category = 'בישול';
             else if (txt.includes('צהרון') || txt.includes('קייטנ') || txt.includes('מעון')) category = 'צהרון';
             
-            // Force Golden Age category if age fits
             if (a.minAge >= 60) category = 'גיל הזהב';
 
             return {
@@ -302,7 +294,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     };
 
     const processFile = (file: File) => {
-        // Allow .csv and .txt (sometimes csvs are saved as txt)
         const isCSV = file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
         const isJSON = file.name.toLowerCase().endsWith('.json');
 
@@ -354,7 +345,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         if (file) processFile(file);
     };
 
-    // --- Drag and Drop Handlers ---
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();

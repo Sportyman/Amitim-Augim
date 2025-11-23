@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Activity } from '../types';
 import { CENTER_ADDRESSES } from '../constants';
@@ -73,6 +74,13 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                     {activity.category}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white shadow-black drop-shadow-md">{activity.title}</h2>
+                
+                {/* Show Group Name here too if exists */}
+                {activity.groupName && (
+                    <p className="text-white/90 font-medium mt-1 text-lg shadow-black drop-shadow-sm">
+                        {activity.groupName}
+                    </p>
+                )}
             </div>
         </div>
 
@@ -100,20 +108,24 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                    </div>
                 </div>
                 
+                {/* Show instructor only if known (not null/empty) */}
                 {activity.instructor && (
-                    <div className="flex items-center text-gray-700 col-span-1 sm:col-span-2">
+                    <div className="flex items-center text-gray-700 col-span-1 sm:col-span-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
                        <UserIcon className="w-5 h-5 ml-3 text-sky-500" />
-                       <span className="font-medium">מדריך/ה: {activity.instructor}</span>
+                       <span className="font-bold text-gray-900">מדריך/ה: </span>
+                       <span className="mr-2 text-gray-800">{activity.instructor}</span>
                     </div>
                 )}
 
                 <div className="flex items-center text-gray-700">
                    <UsersIcon className="w-5 h-5 ml-3 text-sky-500" />
-                   <span className="font-medium">{activity.ageGroup}</span>
+                   <div>
+                        <span className="block font-medium">{activity.ageGroup}</span>
+                   </div>
                 </div>
-                <div className="flex items-center text-gray-700">
-                   <ClockIcon className="w-5 h-5 ml-3 text-sky-500" />
-                   <span className="font-medium">{activity.schedule}</span>
+                <div className="flex items-start text-gray-700">
+                   <ClockIcon className="w-5 h-5 ml-3 text-sky-500 flex-shrink-0 mt-0.5" />
+                   <span className="font-medium leading-snug">{activity.schedule}</span>
                 </div>
                 <div className="flex items-center text-gray-700">
                    <span className="w-5 h-5 ml-3 text-center text-sky-500 font-bold">₪</span>
@@ -124,7 +136,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
             {/* Description / AI Summary */}
             <div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">אודות הפעילות</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">
                     {activity.ai_summary || activity.description || "לפעילות זו אין תיאור נוסף כרגע."}
                 </p>
             </div>

@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Activity } from '../types';
-import { UsersIcon, ClockIcon, LocationIcon } from './icons';
+import { ClockIcon, LocationIcon, UsersIcon } from './icons';
 import ActivityImage from './ActivityImage';
 
 interface ActivityListItemProps {
@@ -24,21 +25,33 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
       <div className="p-4 flex flex-col flex-grow justify-between">
         <div>
             <div className="flex justify-between items-start">
-                <h3 
-                    className="text-lg font-bold text-gray-800 cursor-pointer hover:text-sky-600 transition-colors"
-                    onClick={onShowDetails}
-                >
-                    {activity.title}
-                </h3>
+                <div>
+                    <h3 
+                        className="text-lg font-bold text-gray-900 cursor-pointer hover:text-sky-600 transition-colors"
+                        onClick={onShowDetails}
+                    >
+                        {activity.title}
+                    </h3>
+                    
+                    {/* NEW: Group Name */}
+                    {activity.groupName && (
+                        <p className="text-sky-600 font-medium mt-0.5">
+                            {activity.groupName}
+                        </p>
+                    )}
+                </div>
                 <div className="text-lg font-bold text-green-600 flex items-center flex-shrink-0 ml-4">
                     <span>{activity.price} ₪</span>
                 </div>
             </div>
-            <span className="text-xs text-sky-500 font-semibold bg-sky-100 px-2 py-1 rounded-full inline-block mt-1">{activity.category}</span>
+            
+            <div className="mt-2">
+                <span className="text-xs text-sky-500 font-semibold bg-sky-100 px-2 py-1 rounded-full inline-block">{activity.category}</span>
+            </div>
 
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
                 <div className="flex items-center hover:text-blue-600 transition-colors group">
-                    <LocationIcon className="w-4 h-4 ml-2 text-gray-400 group-hover:text-blue-500" />
+                    <LocationIcon className="w-4 h-4 ml-2 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
                     <a 
                         href={mapUrl}
                         target="_blank"
@@ -49,12 +62,14 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
                         {activity.location}
                     </a>
                 </div>
-                <div className="flex items-center">
-                    <UsersIcon className="w-4 h-4 ml-2 text-gray-400" />
+                
+                <div className="flex items-center text-gray-500">
+                    <UsersIcon className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
                     <span>{activity.ageGroup}</span>
                 </div>
-                <div className="flex items-center col-span-1 md:col-span-2">
-                    <ClockIcon className="w-4 h-4 ml-2 text-gray-400" />
+
+                <div className="flex items-start col-span-1 md:col-span-2">
+                    <ClockIcon className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0 mt-0.5" />
                     <span>{activity.schedule}</span>
                 </div>
             </div>

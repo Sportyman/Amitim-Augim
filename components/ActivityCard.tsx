@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Activity } from '../types';
 import { UsersIcon, ClockIcon, LocationIcon } from './icons';
@@ -22,21 +23,31 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
       </div>
       
       <div className="p-3 flex flex-col flex-grow">
-        <div className="flex justify-between items-start mb-2">
+        <div className="flex justify-between items-start mb-1">
             <span className="text-xs text-sky-500 font-semibold bg-sky-100 px-2 py-1 rounded-full whitespace-nowrap">{activity.category}</span>
             <div className="text-base font-bold text-green-600 flex items-center whitespace-nowrap mr-2">
                 <span>{activity.price} ₪</span>
             </div>
         </div>
+        
+        {/* Title */}
         <h3 
-            className="text-base font-bold text-gray-800 flex-grow cursor-pointer hover:text-sky-600 transition-colors line-clamp-2"
+            className="text-base font-bold text-gray-900 cursor-pointer hover:text-sky-600 transition-colors line-clamp-2 leading-tight"
             onClick={onShowDetails}
             title={activity.title}
         >
             {activity.title}
         </h3>
+
+        {/* NEW: Group Name (Blue Subtitle) */}
+        {activity.groupName && (
+            <p className="text-sm text-sky-600 font-semibold mt-1">
+                {activity.groupName}
+            </p>
+        )}
         
-        <div className="mt-3 space-y-1.5 text-xs text-gray-600">
+        <div className="mt-auto space-y-1.5 text-xs text-gray-600 pt-3">
+            {/* Location */}
             <div className="flex items-center text-gray-600 hover:text-blue-600 transition-colors group">
                 <LocationIcon className="w-3.5 h-3.5 ml-2 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
                 <a 
@@ -49,13 +60,17 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
                     {activity.location}
                 </a>
             </div>
-            <div className="flex items-center">
+
+            {/* Age Group (Gray with Icon) */}
+            <div className="flex items-center text-gray-500">
                 <UsersIcon className="w-3.5 h-3.5 ml-2 text-gray-400 flex-shrink-0" />
                 <span className="truncate">{activity.ageGroup}</span>
             </div>
-             <div className="flex items-center">
-                <ClockIcon className="w-3.5 h-3.5 ml-2 text-gray-400 flex-shrink-0" />
-                <span className="truncate">{activity.schedule}</span>
+
+             {/* Schedule - Removed truncate to show full details */}
+             <div className="flex items-start">
+                <ClockIcon className="w-3.5 h-3.5 ml-2 text-gray-400 flex-shrink-0 mt-0.5" />
+                <span className="line-clamp-2">{activity.schedule}</span>
             </div>
         </div>
         
