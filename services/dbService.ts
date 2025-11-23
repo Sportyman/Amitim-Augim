@@ -1,7 +1,7 @@
 
 import { db, auth } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc, orderBy, limit, where, Timestamp } from 'firebase/firestore';
-import { Activity, AdminUser, UserRole, Category, AuditLog } from '../types';
+import { Activity, AdminUser, UserRole, Category, AuditLog, AppSettings } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 
 const COLLECTION_NAME = 'activities';
@@ -9,6 +9,8 @@ const USERS_COLLECTION = 'users';
 const IMAGES_COLLECTION = 'activity_images';
 const CATEGORIES_COLLECTION = 'categories';
 const AUDIT_COLLECTION = 'audit_logs';
+const SETTINGS_COLLECTION = 'settings';
+const APP_SETTINGS_DOC = 'app_config';
 
 // Helper to remove undefined values which Firestore hates
 const sanitizeData = (data: any) => {
@@ -431,9 +433,6 @@ const getAuditLogs = async (limitCount = 50): Promise<AuditLog[]> => {
 };
 
 const restoreVersion = async (log: AuditLog) => {
-    // If action was 'update' or 'delete', we restore 'previousData'
-    // If action was 'create', we restore by deleting the new doc (inverse)
-    
     try {
         if (log.action === 'update' || log.action === 'delete') {
             if (log.previousData) {
@@ -468,6 +467,32 @@ const deleteOldLogs = async (daysToKeep: number) => {
     
     if (counter > 0) await batch.commit();
     return counter;
+};
+
+// --- App Settings ---
+
+const getAppSettings = async (): Promise<AppSettings> => {
+    try {
+        const docRef = doc(db, SETTINGS_COLLECTION, APP_SETTINGS_DOC);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as AppSettings;
+        }
+        return { enableColorfulCategories: false }; // Default
+    } catch (error) {
+        console.error("Error fetching settings:", error);
+        return { enableColorfulCategories: false };
+    }
+};
+
+const updateAppSettings = async (settings: Partial<AppSettings>) => {
+    try {
+        const docRef = doc(db, SETTINGS_COLLECTION, APP_SETTINGS_DOC);
+        await setDoc(docRef, settings, { merge: true });
+    } catch (error) {
+        console.error("Error saving settings:", error);
+        throw error;
+    }
 };
 
 const getCollectionStats = async () => {
@@ -513,5 +538,7 @@ export const dbService = {
   getAuditLogs,
   restoreVersion,
   deleteOldLogs,
-  getCollectionStats
+  getCollectionStats,
+  getAppSettings,
+  updateAppSettings
 };

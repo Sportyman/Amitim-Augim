@@ -70,3 +70,8 @@ export interface AuditLog {
   newData?: any; // Snapshot after change
   description?: string; // Human readable summary
 }
+
+// --- Global App Settings ---
+export interface AppSettings {
+  enableColorfulCategories: boolean;
+}

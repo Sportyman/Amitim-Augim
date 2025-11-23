@@ -11,7 +11,7 @@ import AgeRangeFilter from '../components/AgeRangeFilter';
 import PriceRangeFilter from '../components/PriceRangeFilter';
 import ActivityModal from '../components/ActivityModal';
 import { CATEGORIES as DEFAULT_CATS } from '../constants'; // Fallback
-import { Activity, ViewMode, Category } from '../types';
+import { Activity, ViewMode, Category, AppSettings } from '../types';
 import { findRelatedKeywords } from '../services/geminiService';
 import { SlidersIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import { dbService } from '../services/dbService';
@@ -20,6 +20,7 @@ import { parseAgeGroupToRange } from '../utils/helpers';
 const PublicHome: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATS);
+  const [settings, setSettings] = useState<AppSettings>({ enableColorfulCategories: false });
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -36,6 +37,10 @@ const PublicHome: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
         try {
+            // Load Settings
+            const appSettings = await dbService.getAppSettings();
+            setSettings(appSettings);
+
             // Load Categories
             const fetchedCategories = await dbService.getCategories();
             setCategories(fetchedCategories);
@@ -273,6 +278,7 @@ const PublicHome: React.FC = () => {
                     categories={categories}
                     selectedCategories={selectedCategories}
                     onCategoryToggle={handleCategoryToggle}
+                    useGradientDesign={settings.enableColorfulCategories}
                 />
                 <SearchBar
                     searchTerm={searchTerm}

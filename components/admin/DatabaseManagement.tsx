@@ -2,9 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { dbService } from '../../services/dbService';
 import { 
-    Trash2, Upload, AlertTriangle, FileSpreadsheet, ImageOff, 
+    Trash2, Upload, AlertTriangle, FileSpreadsheet,
     RefreshCw, ShieldCheck, HardDrive, History, RotateCcw, 
-    BarChart3, CheckCircle, Clock
+    BarChart3, Clock, Image as ImageIcon, CheckSquare
 } from 'lucide-react';
 import { Activity, AuditLog } from '../../types';
 
@@ -13,13 +13,10 @@ interface DatabaseManagementProps {
 }
 
 const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) => {
-    const [activeTab, setActiveTab] = useState<'sync' | 'history' | 'usage'>('sync');
+    const [activeTab, setActiveTab] = useState<'sync' | 'history' | 'maintenance'>('sync');
     
     // Sync State
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [deleteImages, setDeleteImages] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
-    const [isDragActive, setIsDragActive] = useState(false);
     const [archiveMissing, setArchiveMissing] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,14 +24,19 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
-    // Usage State
+    // Maintenance State
     const [stats, setStats] = useState<any>(null);
-    const [cleaningLogs, setCleaningLogs] = useState(false);
+    const [selectedDeletions, setSelectedDeletions] = useState({
+        activities: false,
+        history: false,
+        images: false
+    });
+    const [isPerformingDelete, setIsPerformingDelete] = useState(false);
 
     // --- Effects ---
     useEffect(() => {
         if (activeTab === 'history') loadLogs();
-        if (activeTab === 'usage') loadStats();
+        if (activeTab === 'maintenance') loadStats();
     }, [activeTab]);
 
     const loadLogs = async () => {
@@ -63,45 +65,38 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         }
     };
 
-    const handleCleanupLogs = async () => {
-        if (!confirm('האם למחוק לוגים ישנים מחודש? פעולה זו תחסוך מקום אך תמנע שחזור היסטורי.')) return;
-        setCleaningLogs(true);
-        try {
-            const count = await dbService.deleteOldLogs(30); // Keep 30 days
-            alert(`נמחקו ${count} רשומות היסטוריה.`);
-            loadStats();
-        } catch (e) {
-            alert('שגיאה בניקוי');
-        } finally {
-            setCleaningLogs(false);
-        }
-    };
-
-    const handleDeleteAll = async () => {
-        if (!window.confirm('אזהרה חמורה: פעולה זו תמחק את כל החוגים הקיימים במערכת!\n\nהאם אתה בטוח לחלוטין שברצונך להמשיך?')) {
-            return;
-        }
+    const handleExecuteDeletion = async () => {
+        const { activities, history, images } = selectedDeletions;
         
-        if (!window.confirm('אישור אחרון: כל המידע יימחק ולא ניתן יהיה לשחזר אותו. להמשיך?')) {
+        if (!activities && !history && !images) {
+            alert('אנא בחר לפחות אפשרות אחת למחיקה.');
             return;
         }
 
-        setIsDeleting(true);
+        let message = 'אזהרה: הפעולות הבאות יתבצעו:\n';
+        if (activities) message += '- מחיקת כל החוגים (לא ניתן לשחזור)\n';
+        if (history) message += '- מחיקת כל היסטוריית השינויים\n';
+        if (images) message += '- מחיקת כל זכרון התמונות (דורש העלאה מחדש)\n';
+        
+        message += '\nהאם להמשיך?';
+
+        if (!window.confirm(message)) return;
+
+        setIsPerformingDelete(true);
         try {
-            await dbService.deleteAllActivities();
-            if (deleteImages) {
-                await dbService.clearImageCache();
-                alert('כל הנתונים נמחקו, כולל זכרון התמונות.');
-            } else {
-                alert('כל החוגים נמחקו בהצלחה.\nזכרון התמונות נשמר.');
-            }
-            onRefresh();
+            if (activities) await dbService.deleteAllActivities();
+            if (history) await dbService.deleteOldLogs(0); // 0 days = delete all
+            if (images) await dbService.clearImageCache();
+            
+            alert('הפעולות בוצעו בהצלחה.');
             loadStats();
-        } catch (error) {
-            console.error(error);
-            alert('אירעה שגיאה בעת המחיקה.');
+            onRefresh();
+            setSelectedDeletions({ activities: false, history: false, images: false });
+        } catch (e) {
+            console.error(e);
+            alert('אירעה שגיאה במהלך הניקוי.');
         } finally {
-            setIsDeleting(false);
+            setIsPerformingDelete(false);
         }
     };
 
@@ -430,8 +425,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 <button onClick={() => setActiveTab('history')} className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${activeTab === 'history' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                     <div className="flex items-center gap-2"><History className="w-4 h-4"/> היסטוריה ושחזור</div>
                 </button>
-                <button onClick={() => setActiveTab('usage')} className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${activeTab === 'usage' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                    <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4"/> שימוש ומכסות</div>
+                <button onClick={() => setActiveTab('maintenance')} className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${activeTab === 'maintenance' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4"/> תחזוקה וניקוי</div>
                 </button>
             </div>
 
@@ -443,8 +438,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         <p className="text-sm text-gray-500 mb-6">ייבוא קובץ חדש יעדכן רשומות קיימות ויוסיף חדשות. תמונות ישמרו.</p>
 
                         <div 
-                            className={`flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-xl transition-all cursor-pointer mb-4
-                                ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-100 bg-gray-50 hover:bg-blue-50/30'}`}
+                            className={`flex flex-col items-center justify-center p-10 border-2 border-dashed border-blue-100 bg-gray-50 hover:bg-blue-50/30 rounded-xl transition-all cursor-pointer mb-4`}
                             onClick={() => fileInputRef.current?.click()}
                         >
                             <Upload className="w-10 h-10 text-blue-400 mb-3" />
@@ -461,22 +455,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         </label>
                         
                         {isUploading && <div className="mt-4 text-blue-600 text-center font-bold animate-pulse">מעבד נתונים...</div>}
-                    </div>
-
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100">
-                        <div className="flex items-center gap-2 text-red-600 mb-4">
-                            <AlertTriangle className="w-5 h-5" />
-                            <h3 className="font-bold">אזור סכנה</h3>
-                        </div>
-                        <div className="flex flex-col gap-3">
-                            <label className="flex items-center gap-2 text-gray-600 text-sm">
-                                <input type="checkbox" checked={deleteImages} onChange={(e) => setDeleteImages(e.target.checked)} className="rounded text-red-600" />
-                                מחק גם את זכרון התמונות (לא מומלץ)
-                            </label>
-                            <button onClick={handleDeleteAll} disabled={isDeleting} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 w-fit flex items-center gap-2">
-                                {isDeleting ? 'מוחק...' : <><Trash2 className="w-4 h-4"/> איפוס מלא של המערכת</>}
-                            </button>
-                        </div>
                     </div>
                 </div>
             )}
@@ -542,10 +520,11 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 </div>
             )}
 
-            {/* TAB 3: USAGE */}
-            {activeTab === 'usage' && (
+            {/* TAB 3: MAINTENANCE & USAGE */}
+            {activeTab === 'maintenance' && (
                 <div className="space-y-6">
-                    {/* Quota Cards */}
+                    
+                    {/* Usage Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                             <div className="flex items-center gap-3 mb-2">
@@ -553,48 +532,85 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                                 <span className="text-gray-500 text-sm font-bold">מספר חוגים</span>
                             </div>
                             <div className="text-3xl font-bold text-gray-800">{stats?.activities || 0}</div>
-                            <div className="text-xs text-gray-400 mt-1">מסמכים באוסף הראשי</div>
                         </div>
 
                         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="bg-purple-100 p-2 rounded-lg text-purple-600"><History className="w-5 h-5"/></div>
-                                <span className="text-gray-500 text-sm font-bold">רשומות היסטוריה</span>
+                                <span className="text-gray-500 text-sm font-bold">היסטוריה (רשומות)</span>
                             </div>
                             <div className="text-3xl font-bold text-gray-800">{stats?.logs || 0}</div>
-                            <div className="text-xs text-gray-400 mt-1">פעולות מתועדות לשחזור</div>
                         </div>
 
                         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="bg-orange-100 p-2 rounded-lg text-orange-600"><HardDrive className="w-5 h-5"/></div>
-                                <span className="text-gray-500 text-sm font-bold">נפח מוערך</span>
+                                <span className="text-gray-500 text-sm font-bold">נפח (מוערך)</span>
                             </div>
                             <div className="text-3xl font-bold text-gray-800">{stats?.estimatedSizeMB || 0} <span className="text-sm font-normal text-gray-500">MB</span></div>
-                            
-                            <div className="w-full bg-gray-100 rounded-full h-1.5 mt-3">
-                                <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: `${Math.min(((stats?.estimatedSizeMB || 0) / 1000) * 100, 100)}%` }}></div>
-                            </div>
-                            <div className="text-xs text-gray-400 mt-1">מתוך 1GB (מסלול חינם)</div>
                         </div>
                     </div>
 
-                    {/* Maintenance */}
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                        <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <ShieldCheck className="w-5 h-5 text-green-600"/>
-                            תחזוקה וניקוי
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-4">
-                            כדי לשמור על ביצועים גבוהים ועל המסגרת החינמית, מומלץ לנקות היסטוריה ישנה מדי פעם.
-                        </p>
+                    {/* Deletion Control Panel */}
+                    <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                            <div className="bg-red-100 p-2 rounded-lg text-red-600"><AlertTriangle className="w-6 h-6"/></div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800">לוח בקרה למחיקה</h3>
+                                <p className="text-sm text-gray-500">בחר בזהירות אילו נתונים ברצונך להסיר מהמערכת לצמיתות.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 mb-6">
+                            <label className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${selectedDeletions.activities ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                                <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center ${selectedDeletions.activities ? 'bg-red-600 border-red-600' : 'bg-white border-gray-300'}`}>
+                                    {selectedDeletions.activities && <CheckSquare className="w-3.5 h-3.5 text-white" />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={selectedDeletions.activities} onChange={() => setSelectedDeletions(p => ({ ...p, activities: !p.activities }))} />
+                                <div>
+                                    <div className="flex items-center gap-2 font-bold text-gray-800">
+                                        <FileSpreadsheet className="w-4 h-4 text-gray-500" />
+                                        מחיקת כל החוגים
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">כל המידע על החוגים, השעות והמדריכים יימחק. פעולה זו אינה הפיכה.</p>
+                                </div>
+                            </label>
+
+                            <label className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${selectedDeletions.history ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                                <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center ${selectedDeletions.history ? 'bg-red-600 border-red-600' : 'bg-white border-gray-300'}`}>
+                                    {selectedDeletions.history && <CheckSquare className="w-3.5 h-3.5 text-white" />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={selectedDeletions.history} onChange={() => setSelectedDeletions(p => ({ ...p, history: !p.history }))} />
+                                <div>
+                                    <div className="flex items-center gap-2 font-bold text-gray-800">
+                                        <History className="w-4 h-4 text-gray-500" />
+                                        ניקוי היסטוריה
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">מחיקת כל יומני התיעוד (Audit Logs). לא תוכל לשחזר גרסאות קודמות.</p>
+                                </div>
+                            </label>
+
+                            <label className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${selectedDeletions.images ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                                <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center ${selectedDeletions.images ? 'bg-red-600 border-red-600' : 'bg-white border-gray-300'}`}>
+                                    {selectedDeletions.images && <CheckSquare className="w-3.5 h-3.5 text-white" />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={selectedDeletions.images} onChange={() => setSelectedDeletions(p => ({ ...p, images: !p.images }))} />
+                                <div>
+                                    <div className="flex items-center gap-2 font-bold text-gray-800">
+                                        <ImageIcon className="w-4 h-4 text-gray-500" />
+                                        איפוס זכרון תמונות
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">כל הקישורים לתמונות ששויכו ידנית ימחקו. בייבוא הבא תצטרך להגדיר אותן שוב.</p>
+                                </div>
+                            </label>
+                        </div>
+
                         <button 
-                            onClick={handleCleanupLogs} 
-                            disabled={cleaningLogs || !stats?.logs}
-                            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-bold flex items-center gap-2 disabled:opacity-50"
+                            onClick={handleExecuteDeletion} 
+                            disabled={(!selectedDeletions.activities && !selectedDeletions.history && !selectedDeletions.images) || isPerformingDelete}
+                            className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            <Clock className="w-4 h-4"/>
-                            נקה היסטוריה (שמור רק 30 יום אחרונים)
+                            {isPerformingDelete ? 'מבצע ניקוי...' : <><Trash2 className="w-5 h-5"/> בצע ניקוי נתונים שנבחרו</>}
                         </button>
                     </div>
                 </div>

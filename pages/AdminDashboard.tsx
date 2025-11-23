@@ -9,7 +9,7 @@ import {
     Plus, Edit, Trash2, LogOut, Database, Download,
     Search, LayoutGrid, List, Users, Sparkles,
     Menu, X, Image as ImageIcon, ChevronDown, ChevronUp,
-    Home, ArrowRight, Save, Eye, EyeOff, Tags
+    Home, ArrowRight, Save, Eye, EyeOff, Tags, Settings
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { canEdit, canDelete, canCreate, canManageUsers, getRoleLabel } from '../utils/permissions';
@@ -18,6 +18,7 @@ import UserManagement from '../components/admin/UserManagement';
 import AIEnrichmentTool from '../components/admin/AIEnrichmentTool';
 import DatabaseManagement from '../components/admin/DatabaseManagement';
 import CategoryManagement from '../components/admin/CategoryManagement';
+import SettingsPanel from '../components/admin/SettingsPanel';
 import { formatSchedule, formatStringList } from '../utils/helpers';
 
 // --- Auto Logout Hook ---
@@ -60,7 +61,7 @@ const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users' | 'ai' | 'db' | 'categories'>('list');
+  const [currentView, setCurrentView] = useState<'list' | 'bulk' | 'users' | 'ai' | 'db' | 'categories' | 'settings'>('list');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedActivityId, setExpandedActivityId] = useState<string | number | null>(null);
   
@@ -275,6 +276,16 @@ const AdminDashboard: React.FC = () => {
                     ניהול צוות
                 </button>
               )}
+
+              {canCreate(userRole) && (
+                  <button 
+                    onClick={() => { setCurrentView('settings'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${currentView === 'settings' ? 'bg-gray-200 text-gray-800' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                    <Settings className="w-5 h-5" />
+                    הגדרות
+                </button>
+              )}
           </div>
 
           <div className="absolute bottom-0 w-full p-4 border-t border-gray-100 bg-gray-50">
@@ -330,6 +341,7 @@ const AdminDashboard: React.FC = () => {
                          currentView === 'ai' ? 'אופטימיזציה ושיפור נתונים' :
                          currentView === 'db' ? 'ניהול מסד נתונים' :
                          currentView === 'categories' ? 'ניהול קטגוריות' :
+                         currentView === 'settings' ? 'הגדרות מערכת' :
                          'ניהול צוות'}
                     </h2>
                     {currentView === 'list' && (
@@ -373,6 +385,8 @@ const AdminDashboard: React.FC = () => {
                 <DatabaseManagement onRefresh={fetchActivities} />
             ) : currentView === 'categories' ? (
                 <CategoryManagement />
+            ) : currentView === 'settings' ? (
+                <SettingsPanel />
             ) : (
                 <>
                     {/* Filters Toolbar */}

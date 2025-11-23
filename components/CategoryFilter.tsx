@@ -7,9 +7,10 @@ interface CategoryFilterProps {
   categories: Category[];
   selectedCategories: string[];
   onCategoryToggle: (categoryId: string) => void;
+  useGradientDesign?: boolean;
 }
 
-const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCategories, onCategoryToggle }) => {
+const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCategories, onCategoryToggle, useGradientDesign = false }) => {
   
   // Filter out hidden categories
   const visibleCategories = categories.filter(c => c.isVisible !== false).sort((a, b) => (a.order || 99) - (b.order || 99));
@@ -24,20 +25,23 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCat
         const isEmoji = category.iconId?.startsWith('emoji:');
         const emojiChar = isEmoji ? category.iconId?.split(':')[1] : null;
 
+        // Design Logic
+        const activeGradient = "bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500";
+        const inactiveGradient = "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-sky-200 group-hover:to-indigo-200";
+        
+        const borderClass = useGradientDesign 
+            ? (isSelected ? activeGradient : inactiveGradient)
+            : (isSelected ? 'bg-sky-500' : 'bg-gray-200 group-hover:bg-sky-200');
+
         return (
-          <div key={category.id} className="flex flex-col items-center gap-3 group">
-            {/* Button Wrapper for Gradient Border */}
-            <div className={`p-[2px] rounded-full transition-all duration-300 ${
-                isSelected 
-                    ? 'bg-gradient-to-tr from-sky-400 via-purple-400 to-pink-400 shadow-lg scale-110' 
-                    : 'bg-gradient-to-tr from-gray-100 to-gray-200 hover:from-sky-200 hover:to-purple-200'
-            }`}>
+          <div key={category.id} className="flex flex-col items-center gap-3 group cursor-pointer" onClick={() => onCategoryToggle(category.id)}>
+            {/* Button Wrapper for Border */}
+            <div className={`p-[3px] rounded-full transition-all duration-300 ${borderClass} ${isSelected && useGradientDesign ? 'shadow-lg scale-110' : ''}`}>
                 <button
-                  onClick={() => onCategoryToggle(category.id)}
                   className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center bg-white transition-all duration-300 backface-hidden`}
                 >
                   {IconComponent ? (
-                      <IconComponent className={`w-8 h-8 sm:w-10 sm:h-10 transition-colors duration-300 ${isSelected ? 'text-purple-600' : 'text-gray-400 group-hover:text-sky-500'}`} />
+                      <IconComponent className={`w-8 h-8 sm:w-10 sm:h-10 transition-colors duration-300 ${isSelected ? 'text-purple-600' : 'text-gray-400 group-hover:text-sky-600'}`} />
                   ) : (
                       <span className="text-3xl sm:text-4xl select-none leading-none filter drop-shadow-sm">{emojiChar || '✨'}</span>
                   )}
