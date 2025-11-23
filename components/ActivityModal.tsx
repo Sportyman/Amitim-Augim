@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { Activity } from '../types';
 import { CENTER_ADDRESSES } from '../constants';
 import ActivityImage from './ActivityImage';
+import { formatSchedule } from '../utils/helpers';
 import { 
     CloseIcon, PhoneIcon, WhatsAppIcon, LocationIcon, 
     ClockIcon, UsersIcon, UserIcon, NavigationIcon 
@@ -50,6 +51,8 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
       ...(activity.tags || []), 
       ...(activity.ai_tags || [])
   ].filter((value, index, self) => self.indexOf(value) === index); // Unique
+
+  const displaySchedule = formatSchedule(activity.schedule);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 z-[100]">
@@ -129,7 +132,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                 </div>
                 <div className="flex items-start text-gray-700" title="זמנים">
                    <ClockIcon className="w-5 h-5 ml-3 text-sky-500 flex-shrink-0 mt-0.5" />
-                   <span className="font-medium leading-snug">{activity.schedule}</span>
+                   <span className="font-medium leading-snug">{displaySchedule}</span>
                 </div>
                 <div className="flex items-center text-gray-700" title="מחיר">
                    <span className="w-5 h-5 ml-3 text-center text-sky-500 font-bold">₪</span>

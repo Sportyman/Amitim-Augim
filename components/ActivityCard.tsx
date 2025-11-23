@@ -3,6 +3,7 @@ import React from 'react';
 import { Activity } from '../types';
 import { UsersIcon, ClockIcon, LocationIcon } from './icons';
 import ActivityImage from './ActivityImage';
+import { formatSchedule } from '../utils/helpers';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -11,6 +12,7 @@ interface ActivityCardProps {
 
 const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) => {
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`;
+  const displaySchedule = formatSchedule(activity.schedule);
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
@@ -70,7 +72,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
              {/* Schedule */}
              <div className="flex items-start" title="זמנים">
                 <ClockIcon className="w-3.5 h-3.5 ml-2 text-gray-400 flex-shrink-0 mt-0.5" />
-                <span className="line-clamp-2">{activity.schedule}</span>
+                <span className="line-clamp-2">{displaySchedule}</span>
             </div>
         </div>
         

@@ -47,7 +47,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     };
 
     // --- Robust CSV Parser ---
-    // Handles quotes, newlines within quotes, and commas correctly.
     const robustCSVParser = (text: string): string[][] => {
         const cleanText = text.trim().replace(/^\uFEFF/, '');
         const firstLine = cleanText.split('\n')[0];
@@ -198,7 +197,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                             if (start && end) return `יום ${day}' ${start}-${end}`;
                             return `יום ${day}'`;
                         });
-                        scheduleStr = parts.join(' | ');
+                        scheduleStr = parts.join('. ');
                         jsonSuccess = true;
                     }
                 } catch (e) {

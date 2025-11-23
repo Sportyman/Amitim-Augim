@@ -17,6 +17,7 @@ import BulkUpdateTool from '../components/admin/BulkUpdateTool';
 import UserManagement from '../components/admin/UserManagement';
 import AIEnrichmentTool from '../components/admin/AIEnrichmentTool';
 import DatabaseManagement from '../components/admin/DatabaseManagement';
+import { formatSchedule } from '../utils/helpers';
 
 // --- Auto Logout Hook ---
 const TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes
@@ -564,7 +565,7 @@ const AdminDashboard: React.FC = () => {
                                                             {/* Extra Info Column */}
                                                             <div className="w-48 text-sm text-gray-600 border-r border-gray-200 pr-6 space-y-2">
                                                                 <div><span className="font-semibold">מדריך:</span> {activity.instructor || '-'}</div>
-                                                                <div><span className="font-semibold">לו"ז:</span> {activity.schedule}</div>
+                                                                <div><span className="font-semibold">לו"ז:</span> {formatSchedule(activity.schedule)}</div>
                                                                 <div><span className="font-semibold">מזהה:</span> {activity.id}</div>
                                                                 {activity.minAge && <div><span className="font-semibold">גילאים:</span> {activity.minAge}-{activity.maxAge}</div>}
                                                             </div>
