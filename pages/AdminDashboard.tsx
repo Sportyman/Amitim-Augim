@@ -18,7 +18,7 @@ import UserManagement from '../components/admin/UserManagement';
 import AIEnrichmentTool from '../components/admin/AIEnrichmentTool';
 import DatabaseManagement from '../components/admin/DatabaseManagement';
 import CategoryManagement from '../components/admin/CategoryManagement';
-import { formatSchedule } from '../utils/helpers';
+import { formatSchedule, formatStringList } from '../utils/helpers';
 
 // --- Auto Logout Hook ---
 const TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes
@@ -508,7 +508,7 @@ const AdminDashboard: React.FC = () => {
                                                         </div>
                                                         <div className="mr-4">
                                                             <div className="text-sm font-medium text-gray-900">{activity.title}</div>
-                                                            <div className="text-xs text-gray-500">{activity.ageGroup}</div>
+                                                            <div className="text-xs text-gray-500">{formatStringList(activity.ageGroup)}</div>
                                                         </div>
                                                     </div>
                                                 </td>

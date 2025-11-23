@@ -63,3 +63,31 @@ export const formatSchedule = (schedule: string): string => {
 
   return clean.trim();
 };
+
+export const formatStringList = (str: string): string => {
+  if (!str) return '';
+  
+  // Check if string looks like a JSON array or Python list (starts with [ and ends with ])
+  if (str.trim().startsWith('[') && str.trim().endsWith(']')) {
+      const content = str.trim().slice(1, -1);
+      if (!content.trim()) return ''; // Empty list
+      
+      // Split by comma, but be careful about commas inside quotes if possible
+      // For simplicity given the data format ["A", "B"], split by comma is usually safe enough 
+      // after removing brackets.
+      const parts = content.split(',');
+      
+      return parts.map(part => {
+          let p = part.trim();
+          // Remove wrapping quotes (' or ")
+          if ((p.startsWith('"') && p.endsWith('"')) || (p.startsWith("'") && p.endsWith("'"))) {
+              p = p.slice(1, -1);
+          }
+          // Unescape common escapes if needed
+          p = p.replace(/\\'/g, "'").replace(/\\"/g, '"');
+          return p.trim();
+      }).filter(p => p.length > 0).join(', ');
+  }
+  
+  return str;
+};

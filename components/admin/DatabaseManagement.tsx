@@ -231,6 +231,25 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const mainGroup = getVal(colMap.mainAgeGroup);
             
             let ageGroupDisplay = mainGroup;
+            
+            // Clean JSON list format if present: ["a", "b"] -> a, b
+            if (ageGroupDisplay && ageGroupDisplay.startsWith('[') && ageGroupDisplay.endsWith(']')) {
+                 const cleanBrackets = ageGroupDisplay.replace(/[\[\]]/g, '');
+                 const parts = cleanBrackets.split(',');
+                 const cleanParts = parts.map(p => {
+                        let s = p.trim();
+                        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+                            s = s.slice(1, -1);
+                        }
+                        s = s.replace(/\\/g, ''); // unescape
+                        return s.trim();
+                 }).filter(s => s.length > 0);
+                 
+                 if (cleanParts.length > 0) {
+                     ageGroupDisplay = cleanParts.join(', ');
+                 }
+            }
+
             if (!ageGroupDisplay) {
                 if (!isNaN(minAge)) {
                     ageGroupDisplay = !isNaN(maxAge) ? `גילאי ${minAge}-${maxAge}` : `מגיל ${minAge}`;

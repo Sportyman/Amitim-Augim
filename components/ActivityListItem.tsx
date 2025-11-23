@@ -3,7 +3,7 @@ import React from 'react';
 import { Activity } from '../types';
 import { ClockIcon, LocationIcon, UsersIcon } from './icons';
 import ActivityImage from './ActivityImage';
-import { formatSchedule } from '../utils/helpers';
+import { formatSchedule, formatStringList } from '../utils/helpers';
 
 interface ActivityListItemProps {
   activity: Activity;
@@ -13,6 +13,7 @@ interface ActivityListItemProps {
 const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDetails }) => {
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`;
   const displaySchedule = formatSchedule(activity.schedule);
+  const displayAgeGroup = formatStringList(activity.ageGroup);
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 flex flex-col sm:flex-row hover:shadow-lg">
@@ -67,7 +68,7 @@ const ActivityListItem: React.FC<ActivityListItemProps> = ({ activity, onShowDet
                 
                 <div className="flex items-center text-gray-500" title="קהל יעד">
                     <UsersIcon className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
-                    <span>{activity.ageGroup}</span>
+                    <span>{displayAgeGroup}</span>
                 </div>
 
                 <div className="flex items-start col-span-1 md:col-span-2" title="זמנים">

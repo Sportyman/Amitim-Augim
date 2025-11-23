@@ -3,7 +3,7 @@ import React from 'react';
 import { Activity } from '../types';
 import { UsersIcon, ClockIcon, LocationIcon } from './icons';
 import ActivityImage from './ActivityImage';
-import { formatSchedule } from '../utils/helpers';
+import { formatSchedule, formatStringList } from '../utils/helpers';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -13,6 +13,7 @@ interface ActivityCardProps {
 const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) => {
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`;
   const displaySchedule = formatSchedule(activity.schedule);
+  const displayAgeGroup = formatStringList(activity.ageGroup);
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
@@ -66,7 +67,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onShowDetails }) 
             {/* Age Group (Gray with Icon) */}
             <div className="flex items-center text-gray-500" title="קהל יעד">
                 <UsersIcon className="w-3.5 h-3.5 ml-2 text-gray-400 flex-shrink-0" />
-                <span className="truncate">{activity.ageGroup}</span>
+                <span className="truncate">{displayAgeGroup}</span>
             </div>
 
              {/* Schedule */}

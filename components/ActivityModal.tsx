@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Activity } from '../types';
 import { CENTER_ADDRESSES } from '../constants';
 import ActivityImage from './ActivityImage';
-import { formatSchedule } from '../utils/helpers';
+import { formatSchedule, formatStringList } from '../utils/helpers';
 import { 
     CloseIcon, PhoneIcon, WhatsAppIcon, LocationIcon, 
     ClockIcon, UsersIcon, UserIcon, NavigationIcon 
@@ -53,6 +53,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
   ].filter((value, index, self) => self.indexOf(value) === index); // Unique
 
   const displaySchedule = formatSchedule(activity.schedule);
+  const displayAgeGroup = formatStringList(activity.ageGroup);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 z-[100]">
@@ -127,7 +128,7 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
                 <div className="flex items-center text-gray-700" title="קהל יעד">
                    <UsersIcon className="w-5 h-5 ml-3 text-sky-500" />
                    <div>
-                        <span className="block font-medium">{activity.ageGroup}</span>
+                        <span className="block font-medium">{displayAgeGroup}</span>
                    </div>
                 </div>
                 <div className="flex items-start text-gray-700" title="זמנים">
