@@ -36,39 +36,81 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         }
     };
 
-    // --- CSV/TSV Parsing Logic ---
-    const parseCSV = (csvText: string): Activity[] => {
-        const lines = csvText.split(/\r\n|\n/).filter(line => line.trim() !== '');
-        if (lines.length < 2) return [];
-
-        // Detect delimiter (Tab for Excel copy-paste or Comma for standard CSV)
-        const firstLine = lines[0];
-        const delimiter = firstLine.includes('\t') ? '\t' : ',';
+    // --- Robust CSV Parser ---
+    // Handles quotes, newlines within quotes, and commas correctly.
+    const robustCSVParser = (text: string): string[][] => {
+        const rows: string[][] = [];
+        let currentRow: string[] = [];
+        let currentField = '';
+        let inQuotes = false;
         
-        // Parse headers
-        const headers = firstLine.split(delimiter).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const nextChar = text[i + 1];
+            
+            if (char === '"') {
+                if (inQuotes && nextChar === '"') {
+                    // Escaped quote "" -> "
+                    currentField += '"';
+                    i++; 
+                } else {
+                    // Toggle quote state
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                // Field separator
+                currentRow.push(currentField);
+                currentField = '';
+            } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                // Row separator
+                if (char === '\r' && nextChar === '\n') i++; // Skip \n of \r\n
+                currentRow.push(currentField);
+                rows.push(currentRow);
+                currentRow = [];
+                currentField = '';
+            } else {
+                // Regular character
+                currentField += char;
+            }
+        }
+        
+        // Add last field/row if exists
+        if (currentField || currentRow.length) {
+            currentRow.push(currentField);
+            rows.push(currentRow);
+        }
+        
+        return rows;
+    };
+
+    const parseCSV = (csvText: string): Activity[] => {
+        const rows = robustCSVParser(csvText);
+        if (rows.length < 2) return [];
+
+        // Parse headers (first row)
+        const headers = rows[0].map(h => h.trim().toLowerCase());
         
         // Helper to map headers to indices
         const getColumnIndex = (keywords: string[]) => {
             return headers.findIndex(h => keywords.some(k => h === k || h.includes(k)));
         };
 
-        // Map based on user's NEW file structure (English headers)
+        // Map based on user's NEW file structure
         const colMap = {
-            id: getColumnIndex(['activity_id']),
-            title: getColumnIndex(['activity_name']),
-            groupName: getColumnIndex(['group_raw']),
+            id: getColumnIndex(['activity_id', 'id']),
+            title: getColumnIndex(['activity_name', 'title']),
+            groupName: getColumnIndex(['group_raw', 'קבוצה']),
             
             // Description & Notes
-            description: getColumnIndex(['description_raw']),
+            description: getColumnIndex(['description_raw', 'תיאור']),
             notes: getColumnIndex(['notes_raw']),
             
             // Location
-            locationName: getColumnIndex(['center_name']),
-            address: getColumnIndex(['center_address_he', 'center_address']),
+            locationName: getColumnIndex(['center_name', 'מיקום', 'מרכז']),
+            address: getColumnIndex(['center_address_he', 'center_address', 'כתובת']),
             
             // Price
-            price: getColumnIndex(['price_numeric', 'price_raw']),
+            price: getColumnIndex(['price_numeric', 'price', 'מחיר']),
             
             // Age fields
             ageFrom: getColumnIndex(['age_from']),
@@ -83,26 +125,21 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             frequency: getColumnIndex(['frequency_raw']),
             
             // Contact / Link
-            instructor: getColumnIndex(['instructor_name']),
-            phone: getColumnIndex(['phone', 'instructor_phone']),
-            source: getColumnIndex(['source', 'registration_link'])
+            instructor: getColumnIndex(['instructor_name', 'מדריך']),
+            phone: getColumnIndex(['phone', 'instructor_phone', 'טלפון']),
+            source: getColumnIndex(['source', 'registration_link', 'קישור'])
         };
 
         // Temporary Map to merge rows with same ID
         const activityMap = new Map<string, any>();
 
         // Iterate rows (skip header)
-        for (let i = 1; i < lines.length; i++) {
-            let row: string[];
-            if (delimiter === '\t') {
-                row = lines[i].split('\t');
-            } else {
-                row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-            }
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
             
             const getVal = (idx: number) => {
                 if (idx === -1 || !row[idx]) return '';
-                return row[idx].replace(/^"|"$/g, '').trim().replace(/""/g, '"');
+                return row[idx].trim();
             };
 
             const rawId = getVal(colMap.id);
@@ -110,7 +147,6 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const activityId = rawId || `generated_${i}`; 
             
             const title = getVal(colMap.title);
-            // If no title and no existing entry, skip (bad row)
             if (!title && !activityMap.has(activityId)) continue; 
 
             // Existing object or new one
@@ -121,7 +157,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 price: 0,
                 imageUrl: '',
                 createdAt: new Date(),
-                // Accumulators for merging
+                // Accumulators
                 scheduleParts: [], 
                 rawLocations: [],
                 rawInstructors: [],
@@ -167,7 +203,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             // Age Logic
             const ageFrom = parseFloat(getVal(colMap.ageFrom));
             const ageTo = parseFloat(getVal(colMap.ageTo));
-            
+            // Update min/max if this row has stricter bounds or simply valid bounds
             if (!isNaN(ageFrom)) {
                 if (existing.minAge === undefined || ageFrom < existing.minAge) existing.minAge = ageFrom;
             }
@@ -175,9 +211,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 if (existing.maxAge === undefined || ageTo > existing.maxAge) existing.maxAge = ageTo;
             }
 
-            // Construct Age Group String logic moved to final pass
-
-            // Schedule Logic for this row
+            // Schedule Logic
             const dayHe = getVal(colMap.dayHe);
             const daysAll = getVal(colMap.daysAll);
             const startT = getVal(colMap.startTime);
@@ -186,18 +220,15 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
             let rowSchedule = '';
             
-            // If we have specific time, use specific day
+            // Strategy: Use specific day + time if available, otherwise generic days
+            const effectiveDay = dayHe || daysAll;
+            if (effectiveDay) rowSchedule += effectiveDay;
+            
             if (startT) {
-                const day = dayHe || daysAll; // Fallback to general days if specific day missing
-                if (day) rowSchedule += `יום ${day}`;
-                rowSchedule += ` ${startT}`;
+                rowSchedule += (rowSchedule ? ' ' : '') + startT;
                 if (endT) rowSchedule += `-${endT}`;
-            } else if (freq) {
-                // If just frequency line (e.g. "פעמיים בשבוע")
-                if (!existing.scheduleParts.includes(freq)) rowSchedule = freq;
-            } else if (daysAll) {
-                 // If just days
-                 if (!existing.scheduleParts.includes(daysAll)) rowSchedule = daysAll;
+            } else if (freq && !rowSchedule.includes(freq)) {
+                rowSchedule += ` (${freq})`;
             }
 
             if (rowSchedule) existing.scheduleParts.push(rowSchedule);
@@ -212,37 +243,41 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             
             // Unique phones
             const uniquePhones = [...new Set(a.rawPhones)].filter(Boolean).join(', ');
-
+            
             // Unique schedule parts
-            // Filter duplicates and empty strings
-            let uniqueSched = [...new Set(a.scheduleParts)].filter(Boolean).join(' | ');
+            const uniqueSched = [...new Set(a.scheduleParts)].filter(Boolean).join(' | ');
             
             // Longest description
             let bestDesc = a.rawDescriptions.sort((a: string, b: string) => b.length - a.length)[0] || '';
-            // Append phone to description if not present
+            
+            // Append phone if missing
             if (uniquePhones && !bestDesc.includes(uniquePhones)) {
                 bestDesc += `\nטלפון: ${uniquePhones}`;
             }
 
-            // Age Group Construction
-            let ageGroup = a.groupName || 'רב גילאי';
-            if (a.minAge !== undefined) {
-                if (a.minAge >= 60) ageGroup = 'גיל שלישי 60+';
-                else if (a.minAge >= 18) ageGroup = `מבוגרים (${a.minAge}+)`;
-                else if (a.maxAge && a.maxAge <= 6) ageGroup = `גיל רך (${a.minAge}-${a.maxAge})`;
-                else if (a.maxAge) ageGroup = `ילדים ונוער (${a.minAge}-${a.maxAge})`;
-                else ageGroup = `${a.minAge}+`;
-            }
+             // Age Group Construction
+             let ageGroup = a.groupName || 'רב גילאי';
+             if (a.minAge !== undefined) {
+                 if (a.minAge >= 60) ageGroup = 'גיל שלישי 60+';
+                 else if (a.minAge >= 18) ageGroup = `מבוגרים (${a.minAge}+)`;
+                 else if (a.maxAge && a.maxAge <= 6) ageGroup = `גיל רך (${a.minAge}-${a.maxAge})`;
+                 else if (a.maxAge) ageGroup = `ילדים ונוער (${a.minAge}-${a.maxAge})`;
+                 else ageGroup = `${a.minAge}+`;
+             }
 
-            // Determine Category based on keywords if not set
+            // Determine Category based on keywords
             let category = 'ספורט'; // Default
             const txt = (a.title + ' ' + a.groupName).toLowerCase();
-            if (txt.includes('יצירה') || txt.includes('אומנות') || txt.includes('ציור') || txt.includes('קרמיקה')) category = 'אומנות';
-            else if (txt.includes('מוזיקה') || txt.includes('גיטרה') || txt.includes('פסנתר') || txt.includes('תווים')) category = 'מוזיקה';
-            else if (txt.includes('מחשבים') || txt.includes('טכנולוגיה') || txt.includes('סייבר') || txt.includes('רובוטיקה')) category = 'טכנולוגיה';
+            if (txt.includes('יצירה') || txt.includes('אומנות') || txt.includes('ציור') || txt.includes('קרמיקה') || txt.includes('פיסול') || txt.includes('תכשיט')) category = 'אומנות';
+            else if (txt.includes('מוזיקה') || txt.includes('גיטרה') || txt.includes('פסנתר') || txt.includes('תווים') || txt.includes('שירה') || txt.includes('זמר')) category = 'מוזיקה';
+            else if (txt.includes('מחשבים') || txt.includes('טכנולוגיה') || txt.includes('סייבר') || txt.includes('רובוטיקה') || txt.includes('הייטק')) category = 'טכנולוגיה';
             else if (txt.includes('גמלאים') || txt.includes('גיל הזהב') || txt.includes('מועדון') || txt.includes('הרצאה')) category = 'קהילה';
-            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה')) category = 'העשרה ולימוד';
+            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה') || txt.includes('מדע')) category = 'העשרה ולימוד';
+            else if (txt.includes('ריקוד') || txt.includes('מחול') || txt.includes('בלט') || txt.includes('זומבה') || txt.includes('היפ')) category = 'ריקוד ומחול';
+            else if (txt.includes('בישול') || txt.includes('אפייה') || txt.includes('קונדיטוריה')) category = 'בישול';
+            else if (txt.includes('צהרון') || txt.includes('קייטנ')) category = 'צהרון';
             
+            // Construct Activity Object
             return {
                 id: a.id,
                 title: a.title,
@@ -256,8 +291,9 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 schedule: uniqueSched || 'לפרטים נוספים',
                 instructor: uniqueInst || null,
                 detailsUrl: a.detailsUrl || '#',
-                minAge: a.minAge,
-                maxAge: a.maxAge,
+                // Use undefined if NaN so the sanitizer removes it
+                minAge: a.minAge !== undefined ? a.minAge : undefined,
+                maxAge: a.maxAge !== undefined ? a.maxAge : undefined,
                 createdAt: a.createdAt
             };
         });
@@ -303,7 +339,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 }
             } catch (error) {
                 console.error(error);
-                alert('שגיאה בקריאת הקובץ. וודא שהפורמט תקין.');
+                alert('שגיאה בקריאת הקובץ או בייבוא למסד הנתונים. וודא שהפורמט תקין.');
             } finally {
                 setIsUploading(false);
                 if (fileInputRef.current) fileInputRef.current.value = '';

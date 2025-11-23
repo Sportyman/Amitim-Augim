@@ -1,9 +1,21 @@
+
 import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc } from 'firebase/firestore';
 import { Activity, AdminUser, UserRole } from '../types';
 
 const COLLECTION_NAME = 'activities';
 const USERS_COLLECTION = 'users';
+
+// Helper to remove undefined values which Firestore hates
+const sanitizeData = (data: any) => {
+    const clean: any = {};
+    Object.keys(data).forEach(key => {
+        if (data[key] !== undefined) {
+            clean[key] = data[key];
+        }
+    });
+    return clean;
+};
 
 export const dbService = {
   // --- Activity Management ---
@@ -24,10 +36,11 @@ export const dbService = {
 
   addActivity: async (activity: Omit<Activity, 'id'>) => {
     try {
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+      const cleanActivity = sanitizeData({
         ...activity,
         createdAt: new Date()
       });
+      const docRef = await addDoc(collection(db, COLLECTION_NAME), cleanActivity);
       return docRef.id;
     } catch (error) {
       console.error("Error adding activity: ", error);
@@ -39,7 +52,8 @@ export const dbService = {
     try {
       const activityRef = doc(db, COLLECTION_NAME, id);
       const { id: _, ...dataToUpdate } = updates as any;
-      await updateDoc(activityRef, dataToUpdate);
+      const cleanUpdates = sanitizeData(dataToUpdate);
+      await updateDoc(activityRef, cleanUpdates);
     } catch (error) {
       console.error("Error updating activity: ", error);
       throw error;
@@ -71,7 +85,6 @@ export const dbService = {
             
             // UPSERT LOGIC:
             // If we have a specific string ID (like "act_000001"), use it as the Document ID.
-            // This ensures that re-importing the same file updates existing records instead of duplicating.
             let docRef;
             if (id && String(id).trim().length > 0) {
                  docRef = doc(collectionRef, String(id));
@@ -79,12 +92,13 @@ export const dbService = {
                  docRef = doc(collectionRef); // Generate new ID if missing
             }
             
-            chunkBatch.set(docRef, {
+            const cleanData = sanitizeData({
                 ...data,
                 updatedAt: new Date(),
-                // Preserve createdAt if existing, or set new one
                 createdAt: data.createdAt || new Date() 
-            }, { merge: true }); 
+            });
+
+            chunkBatch.set(docRef, cleanData, { merge: true }); 
         });
         await chunkBatch.commit();
     }
@@ -97,11 +111,13 @@ export const dbService = {
           chunkedIds.push(activityIds.slice(i, i + 400));
       }
 
+      const cleanUpdates = sanitizeData(updates);
+
       for (const chunk of chunkedIds) {
           const chunkBatch = writeBatch(db);
           chunk.forEach((id) => {
               const docRef = doc(db, COLLECTION_NAME, id);
-              chunkBatch.update(docRef, updates);
+              chunkBatch.update(docRef, cleanUpdates);
           });
           await chunkBatch.commit();
       }
