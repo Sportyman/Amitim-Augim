@@ -4,6 +4,7 @@ import { Activity, AdminUser, UserRole } from '../types';
 
 const COLLECTION_NAME = 'activities';
 const USERS_COLLECTION = 'users';
+const IMAGES_COLLECTION = 'activity_images'; // Separate collection to persist image URLs
 
 // Helper to remove undefined values which Firestore hates
 const sanitizeData = (data: any) => {
@@ -17,6 +18,51 @@ const sanitizeData = (data: any) => {
 };
 
 export const dbService = {
+  // --- Image Cache Helpers ---
+  
+  // Fetch all saved images as a map of { id: imageUrl }
+  getSavedImagesMap: async (): Promise<Record<string, string>> => {
+      try {
+          const q = query(collection(db, IMAGES_COLLECTION));
+          const snapshot = await getDocs(q);
+          const map: Record<string, string> = {};
+          snapshot.docs.forEach(doc => {
+              const data = doc.data();
+              if (data.imageUrl) {
+                  map[doc.id] = data.imageUrl;
+              }
+          });
+          return map;
+      } catch (error) {
+          console.error("Error fetching saved images:", error);
+          return {};
+      }
+  },
+
+  // Save a single image to the cache
+  saveImageMapping: async (id: string, imageUrl: string) => {
+      if (!id || !imageUrl) return;
+      try {
+          await setDoc(doc(db, IMAGES_COLLECTION, String(id)), { 
+              imageUrl,
+              updatedAt: new Date() 
+          }, { merge: true });
+      } catch (error) {
+          console.error("Error saving image mapping:", error);
+      }
+  },
+
+  // Clear the image cache (only if explicitly requested)
+  clearImageCache: async () => {
+      const q = query(collection(db, IMAGES_COLLECTION));
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      snapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+      });
+      await batch.commit();
+  },
+
   // --- Activity Management ---
   
   getAllActivities: async (): Promise<Activity[]> => {
@@ -60,6 +106,15 @@ export const dbService = {
         createdAt: new Date()
       });
       const docRef = await addDoc(collection(db, COLLECTION_NAME), cleanActivity);
+      
+      // Cache image if provided
+      if (activity.imageUrl) {
+          // For new docs, we use the generated ID.
+          // Note: This might be tricky for CSV re-import mapping if the ID changes.
+          // But for manual add, it's fine.
+          await dbService.saveImageMapping(docRef.id, activity.imageUrl);
+      }
+      
       return docRef.id;
     } catch (error) {
       console.error("Error adding activity: ", error);
@@ -72,7 +127,14 @@ export const dbService = {
       const activityRef = doc(db, COLLECTION_NAME, id);
       const { id: _, ...dataToUpdate } = updates as any;
       const cleanUpdates = sanitizeData(dataToUpdate);
+      
       await updateDoc(activityRef, cleanUpdates);
+
+      // Update image cache if image changed
+      if (updates.imageUrl) {
+          await dbService.saveImageMapping(id, updates.imageUrl);
+      }
+
     } catch (error) {
       console.error("Error updating activity: ", error);
       throw error;
@@ -82,6 +144,8 @@ export const dbService = {
   deleteActivity: async (id: string) => {
     try {
       await deleteDoc(doc(db, COLLECTION_NAME, id));
+      // NOTE: We intentionally DO NOT delete from IMAGES_COLLECTION here
+      // to allow restoration if the CSV is re-imported with the same ID.
     } catch (error) {
       console.error("Error deleting activity: ", error);
       throw error;
@@ -90,6 +154,9 @@ export const dbService = {
 
   importActivities: async (activities: Activity[]) => {
     const collectionRef = collection(db, COLLECTION_NAME);
+    
+    // 1. Load existing image mappings
+    const savedImagesMap = await dbService.getSavedImagesMap();
 
     // Process in chunks of 400 (Firestore batch limit is 500)
     const chunks = [];
@@ -99,19 +166,32 @@ export const dbService = {
 
     for (const chunk of chunks) {
         const chunkBatch = writeBatch(db);
+        
         chunk.forEach((activity) => {
             const { id, ...data } = activity;
             
             // UPSERT LOGIC: Use ID from CSV as doc ID if available
             let docRef;
+            let finalId = String(id);
+
             if (id && String(id).trim().length > 0) {
-                 docRef = doc(collectionRef, String(id));
+                 docRef = doc(collectionRef, finalId);
             } else {
                  docRef = doc(collectionRef); 
+                 finalId = docRef.id;
             }
             
+            // RESTORE IMAGE LOGIC:
+            // If we have a saved image for this ID, use it.
+            // Otherwise use what's in the CSV (if any).
+            let finalImageUrl = data.imageUrl;
+            if (savedImagesMap[finalId]) {
+                finalImageUrl = savedImagesMap[finalId];
+            }
+
             const cleanData = sanitizeData({
                 ...data,
+                imageUrl: finalImageUrl, // Use the restored or original image
                 updatedAt: new Date(),
                 createdAt: data.createdAt || new Date() 
             });
@@ -133,11 +213,24 @@ export const dbService = {
 
       for (const chunk of chunkedIds) {
           const chunkBatch = writeBatch(db);
+          // Prepare image updates for cache if needed
+          const imageCachePromises: Promise<void>[] = [];
+
           chunk.forEach((id) => {
               const docRef = doc(db, COLLECTION_NAME, id);
               chunkBatch.update(docRef, cleanUpdates);
+              
+              if (updates.imageUrl) {
+                  imageCachePromises.push(dbService.saveImageMapping(id, updates.imageUrl));
+              }
           });
+          
+          // Write batch to DB
           await chunkBatch.commit();
+          // Update cache in background
+          if (imageCachePromises.length > 0) {
+              await Promise.all(imageCachePromises);
+          }
       }
   },
   

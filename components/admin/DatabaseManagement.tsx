@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { dbService } from '../../services/dbService';
-import { Trash2, Upload, AlertTriangle, FileText, Database, FileSpreadsheet } from 'lucide-react';
+import { Trash2, Upload, AlertTriangle, FileText, FileSpreadsheet, ImageOff } from 'lucide-react';
 import { Activity } from '../../types';
 
 interface DatabaseManagementProps {
@@ -9,6 +9,7 @@ interface DatabaseManagementProps {
 
 const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) => {
     const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteImages, setDeleteImages] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isDragActive, setIsDragActive] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,8 +25,17 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
         setIsDeleting(true);
         try {
+            // 1. Delete Activities
             await dbService.deleteAllActivities();
-            alert('כל הנתונים נמחקו בהצלחה. המערכת ריקה כעת.');
+            
+            // 2. Optionally delete image cache
+            if (deleteImages) {
+                await dbService.clearImageCache();
+                alert('כל הנתונים נמחקו, כולל זכרון התמונות.');
+            } else {
+                alert('כל החוגים נמחקו בהצלחה.\nזכרון התמונות נשמר וישויך אוטומטית בייבוא הבא (לפי מזהה חוג).');
+            }
+            
             onRefresh();
         } catch (error) {
             console.error(error);
@@ -320,7 +330,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 if (window.confirm(confirmMsg)) {
                     setIsUploading(true);
                     await dbService.importActivities(dataToImport);
-                    alert('הייבוא הסתיים בהצלחה!');
+                    alert('הייבוא הסתיים בהצלחה! תמונות שוחזרו עבור חוגים קיימים.');
                     onRefresh();
                 }
             } catch (error) {
@@ -368,8 +378,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         <Upload className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-gray-800 text-lg">ייבוא נתונים (פורמט מעובד)</h3>
-                        <p className="text-sm text-gray-500">טען את קובץ ה-CSV המלא והמעובד</p>
+                        <h3 className="font-bold text-gray-800 text-lg">ייבוא נתונים (CSV)</h3>
+                        <p className="text-sm text-gray-500">טעינת קובץ חדש תשמור על שיוך התמונות הקודם (לפי מזהה חוג)</p>
                     </div>
                 </div>
 
@@ -407,7 +417,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 {isUploading && (
                     <div className="mt-6 flex flex-col items-center justify-center gap-2 text-blue-600 animate-in fade-in">
                         <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                        <span className="font-medium">מעבד נתונים...</span>
+                        <span className="font-medium">מעבד נתונים ומשחזר תמונות...</span>
                     </div>
                 )}
             </div>
@@ -419,19 +429,33 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                     </div>
                     <div>
                         <h3 className="font-bold text-red-800 text-lg">איפוס מסד נתונים</h3>
-                        <p className="text-sm text-red-600/80">חובה לבצע לפני טעינת קובץ במבנה חדש!</p>
+                        <p className="text-sm text-red-600/80">חובה לבצע לפני טעינת קובץ במבנה חדש לחלוטין!</p>
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-red-100">
+                <div className="flex flex-col gap-4 bg-white p-4 rounded-xl border border-red-100">
                     <div>
                         <h4 className="font-bold text-gray-800">מחיקת כל החוגים</h4>
                         <p className="text-sm text-gray-500">מוחק את כל הרשומות הקיימות.</p>
                     </div>
+                    
+                    <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <input 
+                            type="checkbox" 
+                            checked={deleteImages}
+                            onChange={(e) => setDeleteImages(e.target.checked)}
+                            className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                        />
+                        <div className="flex items-center gap-2 text-gray-700">
+                            <ImageOff className="w-4 h-4 text-gray-500"/>
+                            <span className="font-medium text-sm">מחק גם את זכרון התמונות (לא מומלץ אם תרצה לשחזר)</span>
+                        </div>
+                    </label>
+
                     <button 
                         onClick={handleDeleteAll}
                         disabled={isDeleting}
-                        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                     >
                         {isDeleting ? (
                             <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
