@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export interface Category {
@@ -54,4 +55,17 @@ export interface AdminUser {
   email: string;
   role: UserRole;
   addedAt: any;
+}
+
+// --- Audit / History Types ---
+export interface AuditLog {
+  id: string;
+  action: 'create' | 'update' | 'delete' | 'bulk_import' | 'restore';
+  collection: string;
+  documentId: string;
+  userEmail: string;
+  timestamp: any; // Firestore Timestamp
+  previousData?: any; // Snapshot before change
+  newData?: any; // Snapshot after change
+  description?: string; // Human readable summary
 }

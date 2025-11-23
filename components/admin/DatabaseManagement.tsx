@@ -1,19 +1,81 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { dbService } from '../../services/dbService';
-import { Trash2, Upload, AlertTriangle, FileText, FileSpreadsheet, ImageOff } from 'lucide-react';
-import { Activity } from '../../types';
+import { 
+    Trash2, Upload, AlertTriangle, FileSpreadsheet, ImageOff, 
+    RefreshCw, ShieldCheck, HardDrive, History, RotateCcw, 
+    BarChart3, CheckCircle, Clock
+} from 'lucide-react';
+import { Activity, AuditLog } from '../../types';
 
 interface DatabaseManagementProps {
     onRefresh: () => void;
 }
 
 const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) => {
+    const [activeTab, setActiveTab] = useState<'sync' | 'history' | 'usage'>('sync');
+    
+    // Sync State
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteImages, setDeleteImages] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isDragActive, setIsDragActive] = useState(false);
+    const [archiveMissing, setArchiveMissing] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // History State
+    const [logs, setLogs] = useState<AuditLog[]>([]);
+    const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+
+    // Usage State
+    const [stats, setStats] = useState<any>(null);
+    const [cleaningLogs, setCleaningLogs] = useState(false);
+
+    // --- Effects ---
+    useEffect(() => {
+        if (activeTab === 'history') loadLogs();
+        if (activeTab === 'usage') loadStats();
+    }, [activeTab]);
+
+    const loadLogs = async () => {
+        setIsLoadingLogs(true);
+        const data = await dbService.getAuditLogs(50);
+        setLogs(data);
+        setIsLoadingLogs(false);
+    };
+
+    const loadStats = async () => {
+        const s = await dbService.getCollectionStats();
+        setStats(s);
+    };
+
+    // --- Actions ---
+
+    const handleRestore = async (log: AuditLog) => {
+        if (!confirm('האם לשחזר לגרסה זו?')) return;
+        try {
+            await dbService.restoreVersion(log);
+            alert('שוחזר בהצלחה!');
+            loadLogs(); // refresh logs
+            onRefresh(); // refresh app
+        } catch (e) {
+            alert('שגיאה בשחזור');
+        }
+    };
+
+    const handleCleanupLogs = async () => {
+        if (!confirm('האם למחוק לוגים ישנים מחודש? פעולה זו תחסוך מקום אך תמנע שחזור היסטורי.')) return;
+        setCleaningLogs(true);
+        try {
+            const count = await dbService.deleteOldLogs(30); // Keep 30 days
+            alert(`נמחקו ${count} רשומות היסטוריה.`);
+            loadStats();
+        } catch (e) {
+            alert('שגיאה בניקוי');
+        } finally {
+            setCleaningLogs(false);
+        }
+    };
 
     const handleDeleteAll = async () => {
         if (!window.confirm('אזהרה חמורה: פעולה זו תמחק את כל החוגים הקיימים במערכת!\n\nהאם אתה בטוח לחלוטין שברצונך להמשיך?')) {
@@ -26,18 +88,15 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
         setIsDeleting(true);
         try {
-            // 1. Delete Activities
             await dbService.deleteAllActivities();
-            
-            // 2. Optionally delete image cache
             if (deleteImages) {
                 await dbService.clearImageCache();
                 alert('כל הנתונים נמחקו, כולל זכרון התמונות.');
             } else {
-                alert('כל החוגים נמחקו בהצלחה.\nזכרון התמונות נשמר וישויך אוטומטית בייבוא הבא (לפי מזהה חוג).');
+                alert('כל החוגים נמחקו בהצלחה.\nזכרון התמונות נשמר.');
             }
-            
             onRefresh();
+            loadStats();
         } catch (error) {
             console.error(error);
             alert('אירעה שגיאה בעת המחיקה.');
@@ -46,7 +105,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         }
     };
 
-    // --- Robust CSV Parser ---
+    // --- CSV Parser (Existing Logic) ---
     const robustCSVParser = (text: string): string[][] => {
         const cleanText = text.trim().replace(/^\uFEFF/, '');
         const firstLine = cleanText.split('\n')[0];
@@ -83,51 +142,44 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 currentField += char;
             }
         }
-        
         if (currentField || currentRow.length) {
             currentRow.push(currentField);
             rows.push(currentRow);
         }
-        
         return rows;
     };
 
     const parseCSV = (csvText: string): Activity[] => {
         const rows = robustCSVParser(csvText);
         if (rows.length < 2) return [];
-
-        // Parse headers
-        const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+        const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, '').replace(/_/g, ''));
         
         const getColumnIndex = (keywords: string[]) => {
-            let idx = headers.findIndex(h => keywords.includes(h));
+            let idx = headers.findIndex(h => keywords.some(k => h === k.replace(/_/g, '')));
             if (idx === -1) {
-                idx = headers.findIndex(h => keywords.some(k => h.includes(k)));
+                idx = headers.findIndex(h => keywords.some(k => h.includes(k.replace(/_/g, ''))));
             }
             return idx;
         };
 
         const colMap = {
-            id: getColumnIndex(['activity_id']), 
-            name: getColumnIndex(['name']), 
-            centerName: getColumnIndex(['center_name']),
-            address: getColumnIndex(['center_address_he']),
-            instructor: getColumnIndex(['instructor_name']),
-            phone: getColumnIndex(['phone_clean']),
-            ageMin: getColumnIndex(['age_min']),
-            ageMax: getColumnIndex(['age_max']),
-            mainAgeGroup: getColumnIndex(['main_age_group']),
-            frequency: getColumnIndex(['frequency_clean']),
-            meetingsJson: getColumnIndex(['meetings_json']),
-            daysList: getColumnIndex(['days_list']),
-            price: getColumnIndex(['price_numeric']),
-            descRaw: getColumnIndex(['description_raw']),
-            descAuto: getColumnIndex(['description_auto']),
-            groupRaw: getColumnIndex(['group_raw']),
-            categoriesApp: getColumnIndex(['categories_app']),
-            tags: getColumnIndex(['tags']),
-            source: getColumnIndex(['source']),
-            regLink: getColumnIndex(['reglink'])
+            id: getColumnIndex(['activity_id', 'id', 'code', 'מזהה', 'קוד']), 
+            name: getColumnIndex(['name', 'title', 'activity_name', 'שם', 'שם_החוג', 'פעילות']), 
+            centerName: getColumnIndex(['center_name', 'center', 'location_name', 'מרכז', 'מתנס', 'מיקום']),
+            address: getColumnIndex(['center_address', 'address', 'street', 'כתובת', 'רחוב']),
+            instructor: getColumnIndex(['instructor', 'teacher', 'guide', 'מדריך', 'מורה']),
+            phone: getColumnIndex(['phone', 'mobile', 'contact', 'טלפון', 'נייד']),
+            ageMin: getColumnIndex(['age_min', 'min_age', 'גיל_מינימום', 'מגיל']),
+            ageMax: getColumnIndex(['age_max', 'max_age', 'גיל_מקסימום', 'עד_גיל']),
+            mainAgeGroup: getColumnIndex(['age_group', 'audience', 'קהל_יעד', 'גילאים']),
+            frequency: getColumnIndex(['frequency', 'times', 'תדירות', 'פעמים']),
+            meetingsJson: getColumnIndex(['meetings_json', 'schedule_json']),
+            daysList: getColumnIndex(['days', 'days_list', 'ימים']),
+            price: getColumnIndex(['price', 'cost', 'amount', 'מחיר', 'עלות']),
+            descRaw: getColumnIndex(['description', 'desc', 'summary', 'תיאור', 'פרטים']),
+            categoriesApp: getColumnIndex(['category', 'categories', 'type', 'קטגוריה', 'תחום']),
+            tags: getColumnIndex(['tags', 'keywords', 'תגיות']),
+            regLink: getColumnIndex(['link', 'url', 'registration', 'קישור', 'הרשמה'])
         };
 
         const activities: Activity[] = [];
@@ -139,15 +191,19 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const getVal = (idx: number) => {
                 if (idx === -1 || !row[idx]) return '';
                 let val = row[idx].trim();
-                if (val.startsWith('"') && val.endsWith('"')) {
-                    val = val.substring(1, val.length - 1);
-                }
-                return val.replace(/""/g, '"');
+                if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1);
+                val = val.replace(/""/g, '"');
+                if (val === 'nan' || val === 'NULL' || val === 'None') return '';
+                return val;
             };
 
-            const activityId = getVal(colMap.id) || `gen_${i}_${Date.now()}`;
+            let activityId = getVal(colMap.id);
             const title = getVal(colMap.name);
             if (!title) continue;
+
+            if (!activityId) {
+                activityId = `gen_${title.replace(/\s+/g, '_')}_${i}`;
+            }
 
             const center = getVal(colMap.centerName);
             const address = getVal(colMap.address);
@@ -155,21 +211,16 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             if (address && address !== center) fullLocation += `, ${address}`;
             if (!fullLocation) fullLocation = 'הרצליה';
 
-            const priceVal = parseFloat(getVal(colMap.price));
+            const priceVal = parseFloat(getVal(colMap.price).replace(/[^\d.]/g, ''));
             const price = (!isNaN(priceVal)) ? priceVal : 0;
 
             let description = getVal(colMap.descRaw);
-            if (!description || description === 'nan' || description.length < 5) {
-                description = getVal(colMap.descAuto);
-            }
-            if (description === 'nan') description = '';
-
             const minAge = parseFloat(getVal(colMap.ageMin));
             const maxAge = parseFloat(getVal(colMap.ageMax));
             const mainGroup = getVal(colMap.mainAgeGroup);
             
             let ageGroupDisplay = mainGroup;
-            if (!ageGroupDisplay || ageGroupDisplay === 'nan') {
+            if (!ageGroupDisplay) {
                 if (!isNaN(minAge)) {
                     ageGroupDisplay = !isNaN(maxAge) ? `גילאי ${minAge}-${maxAge}` : `מגיל ${minAge}`;
                 } else {
@@ -177,18 +228,17 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 }
             }
 
-            // --- SCHEDULE PARSING FIXES ---
+            // Schedule Parsing
             let scheduleStr = '';
             const freqVal = getVal(colMap.frequency);
             const meetingsRaw = getVal(colMap.meetingsJson);
             const daysRaw = getVal(colMap.daysList);
 
             let jsonSuccess = false;
-            if (meetingsRaw && meetingsRaw !== '[]' && meetingsRaw !== 'nan') {
+            if (meetingsRaw && meetingsRaw.length > 2) {
                 try {
                     let jsonStr = meetingsRaw.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true');
                     const meetings = JSON.parse(jsonStr);
-
                     if (Array.isArray(meetings) && meetings.length > 0) {
                         const parts = meetings.map((m: any) => {
                             const day = m.day || '';
@@ -200,18 +250,13 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         scheduleStr = parts.join('. ');
                         jsonSuccess = true;
                     }
-                } catch (e) {
-                    // JSON failed
-                }
+                } catch (e) {}
             }
 
             if (!jsonSuccess) {
                 let displayFreq = '';
                 let displayDays = '';
-
-                // Clean Frequency: Convert "2.0" to "פעמיים בשבוע"
-                if (freqVal && freqVal !== 'nan') {
-                    // Parse float to handle "2.0", "2", "1.0" etc.
+                if (freqVal) {
                     const freqNum = parseFloat(freqVal);
                     if (!isNaN(freqNum)) {
                         const roundedFreq = Math.round(freqNum);
@@ -219,50 +264,40 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                             case 1: displayFreq = 'פעם בשבוע'; break;
                             case 2: displayFreq = 'פעמיים בשבוע'; break;
                             case 3: displayFreq = '3 פעמים בשבוע'; break;
-                            case 4: displayFreq = '4 פעמים בשבוע'; break;
-                            case 5: displayFreq = '5 פעמים בשבוע'; break;
-                            case 6: displayFreq = '6 פעמים בשבוע'; break;
                             default: displayFreq = `${roundedFreq} פעמים בשבוע`;
                         }
                     } else {
                         displayFreq = freqVal;
                     }
                 }
-
-                // Clean Days: Handle "['א'', 'ב'']" or "['א', 'ב']" or "['Thu']"
-                if (daysRaw && daysRaw !== 'nan' && daysRaw !== '[]') {
-                    // 1. Remove brackets
+                if (daysRaw && daysRaw.length > 2) {
                     const cleanBrackets = daysRaw.replace(/[\[\]]/g, '');
-                    // 2. Split by comma
                     const parts = cleanBrackets.split(',');
-                    // 3. Clean each part
                     const cleanParts = parts.map(p => {
                         let s = p.trim();
-                        // Remove surrounding quotes if present (e.g. "א'" -> א')
                         if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
                             s = s.slice(1, -1);
                         }
-                        // Unescape backslashes if python escaped them (e.g. 'א\'')
                         s = s.replace(/\\/g, '');
                         return s.trim();
                     }).filter(s => s.length > 0);
                     
+                    if (!displayFreq && cleanParts.length > 0) {
+                         if (cleanParts.length === 1) displayFreq = 'פעם בשבוע';
+                         else if (cleanParts.length === 2) displayFreq = 'פעמיים בשבוע';
+                    }
                     displayDays = cleanParts.join(', ');
                 }
-
                 if (displayFreq && displayDays) {
                     scheduleStr = `${displayFreq}. ימים: ${displayDays}`;
-                } else if (displayFreq) {
-                    scheduleStr = displayFreq;
-                } else if (displayDays) {
-                    scheduleStr = `ימים: ${displayDays}`;
-                }
+                } else if (displayFreq) scheduleStr = displayFreq;
+                else if (displayDays) scheduleStr = `ימים: ${displayDays}`;
             }
             
             if (!scheduleStr) scheduleStr = 'לפרטים נוספים';
 
             const parseListStr = (str: string): string[] => {
-                if (!str || str === 'nan' || str === '[]') return [];
+                if (!str || str.length < 3) return [];
                 try {
                     const matches = str.match(/'([^']*)'/g);
                     if (matches) {
@@ -276,21 +311,18 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
             const categories = parseListStr(getVal(colMap.categoriesApp));
             let appCategory = 'ספורט';
-            if (categories.length > 0) {
-                appCategory = categories[0];
-            }
+            if (categories.length > 0) appCategory = categories[0];
+            else if (title.includes('גודו') || title.includes('כדור')) appCategory = 'ספורט';
+            else if (title.includes('ציור') || title.includes('אומנות')) appCategory = 'אומנות';
 
             const tags = parseListStr(getVal(colMap.tags));
-            const regLink = getVal(colMap.regLink);
-            const sourceLink = getVal(colMap.source);
-            const finalLink = (regLink && regLink !== 'nan') ? regLink : (sourceLink && sourceLink !== 'nan' ? sourceLink : '#');
+            const finalLink = getVal(colMap.regLink) || '#';
             const instructor = getVal(colMap.instructor);
             const phone = getVal(colMap.phone);
 
             const activity: Activity = {
                 id: activityId,
                 title: title,
-                groupName: getVal(colMap.groupRaw) !== 'nan' ? getVal(colMap.groupRaw) : '',
                 category: appCategory,
                 description: description,
                 imageUrl: '', 
@@ -298,8 +330,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 price: price,
                 ageGroup: ageGroupDisplay,
                 schedule: scheduleStr,
-                instructor: (instructor && instructor !== 'nan') ? instructor : null,
-                phone: (phone && phone !== 'nan') ? phone : null,
+                instructor: instructor || null,
+                phone: phone || null,
                 detailsUrl: finalLink,
                 minAge: !isNaN(minAge) ? minAge : undefined,
                 maxAge: !isNaN(maxAge) ? maxAge : undefined,
@@ -308,42 +340,40 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 isVisible: true,
                 createdAt: new Date()
             };
-
             activities.push(activity);
         }
-
         return activities;
     };
 
     const processFile = (file: File) => {
-        const isCSV = file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
-
-        if (!isCSV) {
-            alert('אנא בחר קובץ CSV בלבד.');
-            return;
-        }
-
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
                 const content = e.target?.result as string;
                 const dataToImport = parseCSV(content);
-                
                 if (dataToImport.length === 0) {
-                    alert('לא נמצאו נתונים תקינים בקובץ.');
+                    alert('לא נמצאו נתונים תקינים.');
                     return;
                 }
-
-                const confirmMsg = `נמצאו ${dataToImport.length} חוגים בקובץ.\n\nהאם לייבא אותם למערכת?`;
-
-                if (window.confirm(confirmMsg)) {
+                if (window.confirm(`נמצאו ${dataToImport.length} חוגים. האם לעדכן?`)) {
                     setIsUploading(true);
+                    let staleIds: string[] = [];
+                    if (archiveMissing) {
+                        const existing = await dbService.getAllActivities();
+                        const newIds = new Set(dataToImport.map(a => String(a.id)));
+                        staleIds = existing.filter(a => !newIds.has(String(a.id))).map(a => String(a.id));
+                    }
                     await dbService.importActivities(dataToImport);
-                    alert('הייבוא הסתיים בהצלחה! תמונות שוחזרו עבור חוגים קיימים.');
+                    
+                    let statusMsg = `עודכנו ${dataToImport.length} חוגים.`;
+                    if (staleIds.length > 0) {
+                        await dbService.updateActivitiesBatch(staleIds, { isVisible: false });
+                        statusMsg += `\n${staleIds.length} חוגים ישנים הועברו ל"לא פעיל".`;
+                    }
+                    alert(statusMsg);
                     onRefresh();
                 }
             } catch (error) {
-                console.error(error);
                 alert('שגיאה בקריאת הקובץ.');
             } finally {
                 setIsUploading(false);
@@ -358,123 +388,186 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         if (file) processFile(file);
     };
 
-    const handleDrag = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setIsDragActive(true);
-        } else if (e.type === "dragleave") {
-            setIsDragActive(false);
-        }
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragActive(false);
-        
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            processFile(e.dataTransfer.files[0]);
-        }
-    };
-
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3 mb-4 border-b border-gray-50 pb-4">
-                    <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
-                        <Upload className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-gray-800 text-lg">ייבוא נתונים (CSV)</h3>
-                        <p className="text-sm text-gray-500">טעינת קובץ חדש תשמור על שיוך התמונות הקודם (לפי מזהה חוג)</p>
-                    </div>
-                </div>
-
-                <div 
-                    className={`flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-xl transition-all cursor-pointer
-                        ${isDragActive 
-                            ? 'border-blue-500 bg-blue-50 scale-[1.02]' 
-                            : 'border-blue-100 bg-blue-50/30 hover:bg-blue-50/50'
-                        }`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                >
-                    <div className="flex gap-4 mb-3 pointer-events-none">
-                        <FileSpreadsheet className={`w-12 h-12 transition-colors ${isDragActive ? 'text-blue-600' : 'text-green-500'}`} />
-                        <FileText className={`w-12 h-12 transition-colors ${isDragActive ? 'text-blue-600' : 'text-orange-400'}`} />
-                    </div>
-                    <p className="text-blue-900 font-bold text-lg pointer-events-none">
-                        {isDragActive ? 'שחרר את הקובץ כאן...' : 'גרור לכאן קובץ CSV'}
-                    </p>
-                    <p className="text-gray-500 text-sm mt-2 pointer-events-none">
-                        תומך בעמודות החדשות: activity_id, name, meetings_json, phone_clean, etc.
-                    </p>
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        accept=".csv,.txt" 
-                        onChange={handleFileUpload} 
-                    />
-                </div>
-                
-                {isUploading && (
-                    <div className="mt-6 flex flex-col items-center justify-center gap-2 text-blue-600 animate-in fade-in">
-                        <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                        <span className="font-medium">מעבד נתונים ומשחזר תמונות...</span>
-                    </div>
-                )}
+            {/* Tabs Navigation */}
+            <div className="flex border-b border-gray-200">
+                <button onClick={() => setActiveTab('sync')} className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${activeTab === 'sync' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    <div className="flex items-center gap-2"><RefreshCw className="w-4 h-4"/> סנכרון וייבוא</div>
+                </button>
+                <button onClick={() => setActiveTab('history')} className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${activeTab === 'history' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    <div className="flex items-center gap-2"><History className="w-4 h-4"/> היסטוריה ושחזור</div>
+                </button>
+                <button onClick={() => setActiveTab('usage')} className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${activeTab === 'usage' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4"/> שימוש ומכסות</div>
+                </button>
             </div>
 
-            <div className="bg-red-50 p-6 rounded-2xl shadow-sm border border-red-100">
-                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-red-100">
-                    <div className="bg-red-100 p-2 rounded-lg text-red-600">
-                        <AlertTriangle className="w-6 h-6" />
+            {/* TAB 1: SYNC & IMPORT */}
+            {activeTab === 'sync' && (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 className="font-bold text-gray-800 text-lg mb-2">עדכון חכם (CSV)</h3>
+                        <p className="text-sm text-gray-500 mb-6">ייבוא קובץ חדש יעדכן רשומות קיימות ויוסיף חדשות. תמונות ישמרו.</p>
+
+                        <div 
+                            className={`flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-xl transition-all cursor-pointer mb-4
+                                ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-100 bg-gray-50 hover:bg-blue-50/30'}`}
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <Upload className="w-10 h-10 text-blue-400 mb-3" />
+                            <p className="text-gray-900 font-bold">לחץ להעלאת קובץ CSV</p>
+                            <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.txt" onChange={handleFileUpload} />
+                        </div>
+
+                        <label className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors select-none">
+                            <input type="checkbox" checked={archiveMissing} onChange={(e) => setArchiveMissing(e.target.checked)} className="w-5 h-5 text-blue-600 rounded" />
+                            <div className="text-gray-700">
+                                <span className="font-bold block text-sm">ארכיון אוטומטי</span>
+                                <span className="text-xs text-gray-500">חוגים שלא מופיעים בקובץ יהפכו ל"לא פעילים" (במקום להימחק).</span>
+                            </div>
+                        </label>
+                        
+                        {isUploading && <div className="mt-4 text-blue-600 text-center font-bold animate-pulse">מעבד נתונים...</div>}
                     </div>
-                    <div>
-                        <h3 className="font-bold text-red-800 text-lg">איפוס מסד נתונים</h3>
-                        <p className="text-sm text-red-600/80">חובה לבצע לפני טעינת קובץ במבנה חדש לחלוטין!</p>
+
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100">
+                        <div className="flex items-center gap-2 text-red-600 mb-4">
+                            <AlertTriangle className="w-5 h-5" />
+                            <h3 className="font-bold">אזור סכנה</h3>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            <label className="flex items-center gap-2 text-gray-600 text-sm">
+                                <input type="checkbox" checked={deleteImages} onChange={(e) => setDeleteImages(e.target.checked)} className="rounded text-red-600" />
+                                מחק גם את זכרון התמונות (לא מומלץ)
+                            </label>
+                            <button onClick={handleDeleteAll} disabled={isDeleting} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 w-fit flex items-center gap-2">
+                                {isDeleting ? 'מוחק...' : <><Trash2 className="w-4 h-4"/> איפוס מלא של המערכת</>}
+                            </button>
+                        </div>
                     </div>
                 </div>
+            )}
 
-                <div className="flex flex-col gap-4 bg-white p-4 rounded-xl border border-red-100">
-                    <div>
-                        <h4 className="font-bold text-gray-800">מחיקת כל החוגים</h4>
-                        <p className="text-sm text-gray-500">מוחק את כל הרשומות הקיימות.</p>
+            {/* TAB 2: HISTORY */}
+            {activeTab === 'history' && (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                        <h3 className="font-bold text-gray-800">יומן שינויים ופעולות</h3>
+                        <button onClick={loadLogs} className="text-blue-600 hover:bg-blue-50 p-2 rounded-full"><RefreshCw className="w-4 h-4"/></button>
                     </div>
                     
-                    <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
-                        <input 
-                            type="checkbox" 
-                            checked={deleteImages}
-                            onChange={(e) => setDeleteImages(e.target.checked)}
-                            className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
-                        />
-                        <div className="flex items-center gap-2 text-gray-700">
-                            <ImageOff className="w-4 h-4 text-gray-500"/>
-                            <span className="font-medium text-sm">מחק גם את זכרון התמונות (לא מומלץ אם תרצה לשחזר)</span>
+                    {isLoadingLogs ? (
+                        <div className="p-8 text-center text-gray-500">טוען היסטוריה...</div>
+                    ) : logs.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">אין נתונים בהיסטוריה.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-right">
+                                <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+                                    <tr>
+                                        <th className="px-4 py-3">זמן</th>
+                                        <th className="px-4 py-3">משתמש</th>
+                                        <th className="px-4 py-3">פעולה</th>
+                                        <th className="px-4 py-3">תיאור</th>
+                                        <th className="px-4 py-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {logs.map(log => (
+                                        <tr key={log.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-3 whitespace-nowrap text-gray-500" dir="ltr">
+                                                {new Date(log.timestamp.seconds * 1000).toLocaleString('he-IL')}
+                                            </td>
+                                            <td className="px-4 py-3">{log.userEmail.split('@')[0]}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                    log.action === 'create' ? 'bg-green-100 text-green-700' :
+                                                    log.action === 'delete' ? 'bg-red-100 text-red-700' :
+                                                    log.action === 'restore' ? 'bg-purple-100 text-purple-700' :
+                                                    'bg-blue-100 text-blue-700'
+                                                }`}>
+                                                    {log.action === 'create' ? 'יצירה' : 
+                                                     log.action === 'update' ? 'עדכון' : 
+                                                     log.action === 'delete' ? 'מחיקה' : 
+                                                     log.action === 'restore' ? 'שחזור' : 'ייבוא'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{log.description}</td>
+                                            <td className="px-4 py-3 text-left">
+                                                {(log.action === 'update' || log.action === 'delete' || log.action === 'create') && (
+                                                    <button onClick={() => handleRestore(log)} className="text-blue-600 hover:underline text-xs font-bold flex items-center gap-1">
+                                                        <RotateCcw className="w-3 h-3"/> שחזר
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    </label>
-
-                    <button 
-                        onClick={handleDeleteAll}
-                        disabled={isDeleting}
-                        className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-                    >
-                        {isDeleting ? (
-                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                        ) : (
-                            <Trash2 className="w-4 h-4" />
-                        )}
-                        מחק הכל
-                    </button>
+                    )}
                 </div>
-            </div>
+            )}
+
+            {/* TAB 3: USAGE */}
+            {activeTab === 'usage' && (
+                <div className="space-y-6">
+                    {/* Quota Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><FileSpreadsheet className="w-5 h-5"/></div>
+                                <span className="text-gray-500 text-sm font-bold">מספר חוגים</span>
+                            </div>
+                            <div className="text-3xl font-bold text-gray-800">{stats?.activities || 0}</div>
+                            <div className="text-xs text-gray-400 mt-1">מסמכים באוסף הראשי</div>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="bg-purple-100 p-2 rounded-lg text-purple-600"><History className="w-5 h-5"/></div>
+                                <span className="text-gray-500 text-sm font-bold">רשומות היסטוריה</span>
+                            </div>
+                            <div className="text-3xl font-bold text-gray-800">{stats?.logs || 0}</div>
+                            <div className="text-xs text-gray-400 mt-1">פעולות מתועדות לשחזור</div>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="bg-orange-100 p-2 rounded-lg text-orange-600"><HardDrive className="w-5 h-5"/></div>
+                                <span className="text-gray-500 text-sm font-bold">נפח מוערך</span>
+                            </div>
+                            <div className="text-3xl font-bold text-gray-800">{stats?.estimatedSizeMB || 0} <span className="text-sm font-normal text-gray-500">MB</span></div>
+                            
+                            <div className="w-full bg-gray-100 rounded-full h-1.5 mt-3">
+                                <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: `${Math.min(((stats?.estimatedSizeMB || 0) / 1000) * 100, 100)}%` }}></div>
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">מתוך 1GB (מסלול חינם)</div>
+                        </div>
+                    </div>
+
+                    {/* Maintenance */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5 text-green-600"/>
+                            תחזוקה וניקוי
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-4">
+                            כדי לשמור על ביצועים גבוהים ועל המסגרת החינמית, מומלץ לנקות היסטוריה ישנה מדי פעם.
+                        </p>
+                        <button 
+                            onClick={handleCleanupLogs} 
+                            disabled={cleaningLogs || !stats?.logs}
+                            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-bold flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <Clock className="w-4 h-4"/>
+                            נקה היסטוריה (שמור רק 30 יום אחרונים)
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1,13 +1,14 @@
 
-import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc, orderBy } from 'firebase/firestore';
-import { Activity, AdminUser, UserRole, Category } from '../types';
+import { db, auth } from './firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { Activity, AdminUser, UserRole, Category, AuditLog } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 
 const COLLECTION_NAME = 'activities';
 const USERS_COLLECTION = 'users';
 const IMAGES_COLLECTION = 'activity_images';
 const CATEGORIES_COLLECTION = 'categories';
+const AUDIT_COLLECTION = 'audit_logs';
 
 // Helper to remove undefined values which Firestore hates
 const sanitizeData = (data: any) => {
@@ -18,6 +19,35 @@ const sanitizeData = (data: any) => {
         }
     });
     return clean;
+};
+
+// --- Internal Logging Helper ---
+const logAction = async (
+    action: AuditLog['action'], 
+    documentId: string, 
+    prevData: any = null, 
+    newData: any = null,
+    desc: string = ''
+) => {
+    try {
+        const userEmail = auth.currentUser?.email || 'unknown';
+        // Don't log heavy bulk operations individually to save writes, 
+        // handled by bulk wrapper usually, but essential for single edits.
+        
+        await addDoc(collection(db, AUDIT_COLLECTION), {
+            action,
+            collection: COLLECTION_NAME,
+            documentId: String(documentId),
+            userEmail,
+            timestamp: new Date(),
+            previousData: prevData ? JSON.stringify(prevData) : null, // Stringify to ensure deep copy/safety
+            newData: newData ? JSON.stringify(newData) : null,
+            description: desc
+        });
+    } catch (e) {
+        console.error("Failed to log action", e);
+        // We don't throw here to avoid blocking the actual operation if logging fails
+    }
 };
 
 // --- Standalone Functions to avoid self-reference issues ---
@@ -68,7 +98,6 @@ const getAllActivities = async (): Promise<Activity[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
-      // SAFETY: Ensure strings are strings to prevent UI crashes
       return {
           id: doc.id,
           title: data.title || 'ללא שם',
@@ -104,6 +133,9 @@ const addActivity = async (activity: Omit<Activity, 'id'>) => {
     });
     const docRef = await addDoc(collection(db, COLLECTION_NAME), cleanActivity);
     
+    // Log
+    await logAction('create', docRef.id, null, cleanActivity, `Created activity: ${activity.title}`);
+
     // Cache image if provided
     if (activity.imageUrl) {
         await saveImageMapping(docRef.id, activity.imageUrl);
@@ -119,10 +151,18 @@ const addActivity = async (activity: Omit<Activity, 'id'>) => {
 const updateActivity = async (id: string, updates: Partial<Activity>) => {
   try {
     const activityRef = doc(db, COLLECTION_NAME, id);
+    
+    // Get current data for log
+    const snapshot = await getDoc(activityRef);
+    const prevData = snapshot.exists() ? snapshot.data() : null;
+
     const { id: _, ...dataToUpdate } = updates as any;
     const cleanUpdates = sanitizeData(dataToUpdate);
     
     await updateDoc(activityRef, cleanUpdates);
+
+    // Log
+    await logAction('update', id, prevData, cleanUpdates, `Updated activity: ${prevData?.title || id}`);
 
     // Update image cache if image changed
     if (updates.imageUrl) {
@@ -137,7 +177,18 @@ const updateActivity = async (id: string, updates: Partial<Activity>) => {
 
 const deleteActivity = async (id: string) => {
   try {
-    await deleteDoc(doc(db, COLLECTION_NAME, id));
+    // Get current data for log
+    const activityRef = doc(db, COLLECTION_NAME, id);
+    const snapshot = await getDoc(activityRef);
+    const prevData = snapshot.exists() ? snapshot.data() : null;
+
+    await deleteDoc(activityRef);
+
+    // Log
+    if (prevData) {
+        await logAction('delete', id, prevData, null, `Deleted activity: ${prevData.title}`);
+    }
+
   } catch (error) {
     console.error("Error deleting activity: ", error);
     throw error;
@@ -147,7 +198,18 @@ const deleteActivity = async (id: string) => {
 const importActivities = async (activities: Activity[]) => {
   const collectionRef = collection(db, COLLECTION_NAME);
   
+  // Get existing images to avoid overwriting with blank/broken URLs if user manually set them
   const savedImagesMap = await getSavedImagesMap();
+
+  // Log specific bulk event
+  await addDoc(collection(db, AUDIT_COLLECTION), {
+      action: 'bulk_import',
+      collection: COLLECTION_NAME,
+      userEmail: auth.currentUser?.email || 'unknown',
+      timestamp: new Date(),
+      description: `Bulk import of ${activities.length} items via CSV`,
+      count: activities.length
+  });
 
   const chunks = [];
   for (let i = 0; i < activities.length; i += 400) {
@@ -173,7 +235,7 @@ const importActivities = async (activities: Activity[]) => {
           let finalImageUrl = data.imageUrl;
           if (savedImagesMap[finalId]) {
               finalImageUrl = savedImagesMap[finalId];
-          } else if (data.imageUrl) {
+          } else if (data.imageUrl && data.imageUrl.length > 5) {
               const imgCacheRef = doc(db, IMAGES_COLLECTION, finalId);
               chunkBatch.set(imgCacheRef, { imageUrl: data.imageUrl, updatedAt: new Date() }, { merge: true });
           }
@@ -199,6 +261,16 @@ const updateActivitiesBatch = async (activityIds: string[], updates: Partial<Act
 
     const cleanUpdates = sanitizeData(updates);
 
+    // Log bulk update generic
+    await addDoc(collection(db, AUDIT_COLLECTION), {
+        action: 'update',
+        collection: COLLECTION_NAME,
+        userEmail: auth.currentUser?.email || 'unknown',
+        timestamp: new Date(),
+        description: `Bulk update of ${activityIds.length} items`,
+        newData: JSON.stringify(cleanUpdates)
+    });
+
     for (const chunk of chunkedIds) {
         const chunkBatch = writeBatch(db);
         
@@ -221,6 +293,15 @@ const deleteAllActivities = async () => {
    const snapshot = await getDocs(q);
    let operationCounter = 0;
    let currentBatch = writeBatch(db);
+
+   // Log
+   await addDoc(collection(db, AUDIT_COLLECTION), {
+        action: 'delete',
+        collection: COLLECTION_NAME,
+        userEmail: auth.currentUser?.email || 'unknown',
+        timestamp: new Date(),
+        description: `Hard reset: Deleted all ${snapshot.size} activities`,
+   });
 
    for (const doc of snapshot.docs) {
        currentBatch.delete(doc.ref);
@@ -335,6 +416,80 @@ const updateCategoriesOrder = async (categories: Category[]) => {
     await batch.commit();
 };
 
+// --- Audit & Maintenance ---
+
+const getAuditLogs = async (limitCount = 50): Promise<AuditLog[]> => {
+    try {
+        const q = query(collection(db, AUDIT_COLLECTION), orderBy('timestamp', 'desc'), limit(limitCount));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AuditLog));
+    } catch (e) {
+        console.error("Error fetching logs", e);
+        return [];
+    }
+};
+
+const restoreVersion = async (log: AuditLog) => {
+    // If action was 'update' or 'delete', we restore 'previousData'
+    // If action was 'create', we restore by deleting the new doc (inverse)
+    
+    try {
+        if (log.action === 'update' || log.action === 'delete') {
+            if (log.previousData) {
+                const data = JSON.parse(log.previousData);
+                await setDoc(doc(db, COLLECTION_NAME, log.documentId), data);
+                await logAction('restore', log.documentId, null, null, `Restored version from ${new Date(log.timestamp.seconds * 1000).toLocaleString()}`);
+            }
+        } else if (log.action === 'create') {
+            await deleteDoc(doc(db, COLLECTION_NAME, log.documentId));
+            await logAction('restore', log.documentId, null, null, `Undid creation from ${new Date(log.timestamp.seconds * 1000).toLocaleString()}`);
+        }
+    } catch (e) {
+        console.error("Restore failed", e);
+        throw e;
+    }
+};
+
+const deleteOldLogs = async (daysToKeep: number) => {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+    
+    const q = query(collection(db, AUDIT_COLLECTION), where('timestamp', '<', Timestamp.fromDate(cutoffDate)));
+    const snapshot = await getDocs(q);
+    
+    const batch = writeBatch(db);
+    let counter = 0;
+    
+    snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+        counter++;
+    });
+    
+    if (counter > 0) await batch.commit();
+    return counter;
+};
+
+const getCollectionStats = async () => {
+    // Rough estimation for Spark plan monitoring
+    const actSnap = await getDocs(collection(db, COLLECTION_NAME));
+    const imgSnap = await getDocs(collection(db, IMAGES_COLLECTION));
+    const logSnap = await getDocs(collection(db, AUDIT_COLLECTION));
+    
+    const activities = actSnap.size;
+    const images = imgSnap.size;
+    const logs = logSnap.size;
+    
+    // Estimation: 1KB per activity, 0.5KB per image ref, 2KB per log (history is heavier)
+    const estimatedSizeKB = (activities * 1) + (images * 0.5) + (logs * 2);
+    
+    return {
+        activities,
+        images,
+        logs,
+        estimatedSizeMB: (estimatedSizeKB / 1024).toFixed(2)
+    };
+};
+
 export const dbService = {
   getSavedImagesMap,
   saveImageMapping,
@@ -353,5 +508,9 @@ export const dbService = {
   getCategories,
   saveCategory,
   deleteCategory,
-  updateCategoriesOrder
+  updateCategoriesOrder,
+  getAuditLogs,
+  restoreVersion,
+  deleteOldLogs,
+  getCollectionStats
 };
