@@ -140,15 +140,16 @@ const PublicHome: React.FC = () => {
       const aiSummary = (activity.ai_summary || '').toLowerCase();
       const instructor = (activity.instructor || '').toLowerCase();
 
-      // Category Filter Logic
-      // We need to find the name of the selected category ID to compare with activity.category string
+      // Category Filter Logic - Fuzzy Matching
       const selectedCategoryNames = selectedCategories.map(id => 
           categories.find(c => c.id === id)?.name.toLowerCase()
       ).filter(Boolean);
 
       const categoryMatch =
         selectedCategories.length === 0 ||
-        selectedCategoryNames.some(name => category === name);
+        selectedCategoryNames.some(name => 
+            category.includes(name) || name.includes(category)
+        );
 
       const searchKeywords = [searchTerm.toLowerCase(), ...relatedKeywords.map(k => k.toLowerCase())];
       const termMatch = searchTerm.trim() === '' || searchKeywords.some(keyword => 

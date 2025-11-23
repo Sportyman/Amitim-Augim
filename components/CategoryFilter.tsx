@@ -26,10 +26,12 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCat
         const emojiChar = isEmoji ? category.iconId?.split(':')[1] : null;
 
         // Design Logic
-        // Active: Bold colors, shadow, slightly larger
+        // Active: Stronger gradient, shadow, scale effect
         const activeGradient = "bg-gradient-to-tr from-sky-500 via-pink-500 to-sky-500 shadow-md scale-110";
-        // Inactive: Pastel colors (Sky/Pink), visible but soft
-        const inactiveGradient = "bg-gradient-to-tr from-sky-200 via-pink-200 to-sky-200 hover:from-sky-300 hover:via-pink-300 hover:to-sky-300";
+        
+        // Inactive (Colorful Mode): Pastel gradient (Sky -> Pink -> Sky) visible even when not selected
+        // Inactive (Classic Mode): Simple gray border
+        const inactiveGradient = "bg-gradient-to-tr from-sky-300 via-pink-300 to-sky-300 opacity-80 hover:opacity-100 hover:scale-105";
         
         const borderClass = useGradientDesign 
             ? (isSelected ? activeGradient : inactiveGradient)
