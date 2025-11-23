@@ -39,10 +39,16 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
       }
   }
 
-  // Resolve exact address (already in location for new schema, but keep fallback)
+  // Resolve exact address
   const navigationQuery = activity.location; 
   const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(navigationQuery)}&navigate=yes`;
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navigationQuery)}`;
+
+  // Merge tags from both sources if present
+  const displayTags = [
+      ...(activity.tags || []), 
+      ...(activity.ai_tags || [])
+  ].filter((value, index, self) => self.indexOf(value) === index); // Unique
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 z-[100]">
@@ -141,9 +147,9 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ activity, onClose }) => {
             )}
             
             {/* Search Tags */}
-            {(activity.ai_tags && activity.ai_tags.length > 0) && (
+            {displayTags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {activity.ai_tags.map((tag, idx) => (
+                {displayTags.map((tag, idx) => (
                   <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
                     #{tag}
                   </span>

@@ -1,7 +1,6 @@
-
 import React, { useState, useRef } from 'react';
 import { dbService } from '../../services/dbService';
-import { Trash2, Upload, AlertTriangle, FileText, Database, FileSpreadsheet } from 'lucide-react';
+import { Trash2, Upload, AlertTriangle, FileText, FileSpreadsheet } from 'lucide-react';
 import { Activity } from '../../types';
 
 interface DatabaseManagementProps {
@@ -87,92 +86,112 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
         
         const getColumnIndex = (keywords: string[]) => {
-            return headers.findIndex(h => keywords.some(k => h === k));
+            let idx = headers.findIndex(h => keywords.includes(h));
+            if (idx === -1) {
+                idx = headers.findIndex(h => keywords.some(k => h.includes(k)));
+            }
+            return idx;
         };
 
-        // --- NEW SCHEMA MAPPING based on user instructions ---
+        // --- SCHEMA MAPPING based on new file format ---
         const colMap = {
-            id: getColumnIndex(['id']), 
-            name: getColumnIndex(['activity_name']), 
+            id: getColumnIndex(['activity_id']), 
+            name: getColumnIndex(['name']), 
             
             // Location
             centerName: getColumnIndex(['center_name']),
-            address: getColumnIndex(['address']),
+            address: getColumnIndex(['center_address_he']),
             
             // Contact
             instructor: getColumnIndex(['instructor_name']),
-            phone: getColumnIndex(['phone']),
+            phone: getColumnIndex(['phone_clean', 'phone']),
             
             // Ages
-            ageText: getColumnIndex(['ages']),
-            ageGroup: getColumnIndex(['age_group']), 
+            ageMin: getColumnIndex(['age_min']),
+            ageMax: getColumnIndex(['age_max']),
+            ageList: getColumnIndex(['age_list']),
+            ageGroupList: getColumnIndex(['age_group_list']),
+            mainAgeGroup: getColumnIndex(['main_age_group']),
             
             // Schedule
-            daysList: getColumnIndex(['days_list']),
-            meetingsJson: getColumnIndex(['meetings_json']), 
             frequency: getColumnIndex(['frequency_clean']),
+            meetingsJson: getColumnIndex(['meetings_json']),
+            daysList: getColumnIndex(['days_list']),
             
             // Price
-            price: getColumnIndex(['price']),
+            price: getColumnIndex(['price_numeric']),
             
-            // Categorization
-            appCategories: getColumnIndex(['app_categories']),
-            tags: getColumnIndex(['tags'])
+            // Content
+            descRaw: getColumnIndex(['description_raw']),
+            descAuto: getColumnIndex(['description_auto']),
+            groupRaw: getColumnIndex(['group_raw']),
+            
+            // Categorization & Meta
+            categoriesApp: getColumnIndex(['categories_app']),
+            tags: getColumnIndex(['tags']),
+            source: getColumnIndex(['source']),
+            regLink: getColumnIndex(['reglink'])
         };
 
         const activities: Activity[] = [];
 
-        // Iterate rows (skip header)
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (row.length < 2 && !row[0]) continue;
 
             const getVal = (idx: number) => {
                 if (idx === -1 || !row[idx]) return '';
-                let val = row[idx].trim();
-                if (val.startsWith('"') && val.endsWith('"')) {
-                    val = val.substring(1, val.length - 1);
-                }
-                return val.replace(/""/g, '"');
+                // Robust parser already handles quotes, so we just trim whitespace
+                return row[idx].trim().replace(/""/g, '"');
             };
 
-            // 1. ID & Title
+            // 1. Basic Info
             const activityId = getVal(colMap.id) || `gen_${i}_${Date.now()}`;
             const title = getVal(colMap.name);
-            if (!title) continue;
+            if (!title) continue; 
 
             // 2. Location
             const center = getVal(colMap.centerName);
             const address = getVal(colMap.address);
             let fullLocation = center;
-            if (address && address !== center) fullLocation += `, ${address}`;
+            if (address && address !== center && !center.includes(address)) fullLocation += `, ${address}`;
             if (!fullLocation) fullLocation = 'הרצליה';
 
             // 3. Price
             const priceVal = parseFloat(getVal(colMap.price));
             const price = (!isNaN(priceVal)) ? priceVal : 0;
 
-            // 4. Schedule (Parsing JSON)
+            // 4. Description
+            let description = getVal(colMap.descRaw);
+            if (!description || description === 'nan' || description.length < 5) {
+                description = getVal(colMap.descAuto);
+            }
+            if (description === 'nan') description = '';
+
+            // 5. Age Logic
+            const minAge = parseFloat(getVal(colMap.ageMin));
+            const maxAge = parseFloat(getVal(colMap.ageMax));
+            const mainGroup = getVal(colMap.mainAgeGroup);
+            
+            let ageGroupDisplay = mainGroup;
+            if (!ageGroupDisplay || ageGroupDisplay === 'nan') {
+                if (!isNaN(minAge)) {
+                    ageGroupDisplay = !isNaN(maxAge) ? `גילאי ${minAge}-${maxAge}` : `מגיל ${minAge}`;
+                } else {
+                    ageGroupDisplay = 'לכל המשפחה';
+                }
+            }
+
+            // 6. Schedule Construction
             let scheduleStr = '';
             const freq = getVal(colMap.frequency);
             const meetingsRaw = getVal(colMap.meetingsJson);
-            
-            try {
-                if (meetingsRaw) {
-                    // Fix potential single quotes to double quotes for JSON parsing if needed
-                    let cleanJson = meetingsRaw.replace(/'/g, '"');
-                    if (cleanJson.startsWith('"') && cleanJson.endsWith('"')) {
-                         cleanJson = cleanJson.substring(1, cleanJson.length -1).replace(/""/g, '"');
-                    }
-                    
-                    // Try parsing
-                    let meetings;
-                    try {
-                        meetings = JSON.parse(meetingsRaw.replace(/""/g, '"'));
-                    } catch {
-                         // fallback for single quotes
-                         meetings = JSON.parse(meetingsRaw.replace(/'/g, '"'));
-                    }
+
+            if (meetingsRaw && meetingsRaw !== '[]' && meetingsRaw !== 'nan') {
+                try {
+                    // Normalize quotes for JSON parsing
+                    let jsonStr = meetingsRaw.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true');
+                    const meetings = JSON.parse(jsonStr);
 
                     if (Array.isArray(meetings)) {
                         const parts = meetings.map((m: any) => {
@@ -184,79 +203,70 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         });
                         scheduleStr = parts.join(' | ');
                     }
+                } catch (e) {
+                    console.warn("Failed parsing meetings JSON", title, meetingsRaw);
                 }
-            } catch (e) {
-                console.warn("Failed to parse meetings JSON for", title, meetingsRaw);
             }
 
             if (!scheduleStr) {
-                scheduleStr = freq || 'לפרטים נוספים';
-            } else if (freq && !scheduleStr.includes(freq)) {
-                 scheduleStr = `${freq} | ${scheduleStr}`;
+                 const days = getVal(colMap.daysList);
+                 if (days && days !== 'nan') scheduleStr = `ימים: ${days}`;
             }
 
-            // 5. Age Group
-            const groupType = getVal(colMap.ageGroup); 
-            const specificAges = getVal(colMap.ageText); 
-            let displayAge = groupType;
-            if (specificAges) displayAge += ` (${specificAges})`;
-            
-            let minAge = 0, maxAge = 120;
-            const rangeMatch = specificAges.match(/(\d+)-(\d+)/);
-            if (rangeMatch) {
-                minAge = parseInt(rangeMatch[1]);
-                maxAge = parseInt(rangeMatch[2]);
-            } else if (groupType.includes('גיל הזהב')) {
-                minAge = 60;
+            if (freq && freq !== 'nan') {
+                scheduleStr = scheduleStr ? `${freq} | ${scheduleStr}` : freq;
             }
+            if (!scheduleStr) scheduleStr = 'לפרטים נוספים';
 
-            // 6. Categories & Tags
-            const catRaw = getVal(colMap.appCategories); 
+            // 7. Categories & Tags
+            const parseListStr = (str: string): string[] => {
+                if (!str || str === 'nan' || str === '[]') return [];
+                try {
+                    const matches = str.match(/'([^']*)'/g);
+                    if (matches) {
+                        return matches.map(m => m.replace(/'/g, '').trim());
+                    }
+                    return JSON.parse(str.replace(/'/g, '"'));
+                } catch (e) {
+                    return [str.replace(/[\[\]']/g, '')];
+                }
+            };
+
+            const categories = parseListStr(getVal(colMap.categoriesApp));
             let appCategory = 'ספורט'; 
-            let aiTags: string[] = [];
+            if (categories.length > 0) {
+                appCategory = categories[0];
+            }
+
+            const tags = parseListStr(getVal(colMap.tags));
+
+            // 8. Links & Contact
+            const regLink = getVal(colMap.regLink);
+            const sourceLink = getVal(colMap.source);
+            const finalLink = (regLink && regLink !== 'nan') ? regLink : (sourceLink && sourceLink !== 'nan' ? sourceLink : '#');
             
-            try {
-                 // Handle python list string representation
-                 const cats = JSON.parse(catRaw.replace(/'/g, '"')); 
-                 if (Array.isArray(cats) && cats.length > 0) {
-                     appCategory = cats[0]; 
-                 }
-            } catch (e) {
-                if (catRaw.includes('אומנות')) appCategory = 'אומנות';
-                else if (catRaw.includes('מוזיקה')) appCategory = 'מוזיקה';
-                else if (catRaw.includes('גיל הזהב')) appCategory = 'גיל הזהב';
-            }
-
-            const tagsRaw = getVal(colMap.tags);
-            try {
-                const parsedTags = JSON.parse(tagsRaw.replace(/'/g, '"'));
-                if (Array.isArray(parsedTags)) aiTags = parsedTags;
-            } catch (e) {
-                if (tagsRaw) aiTags = tagsRaw.split(',').map(t => t.trim());
-            }
-
-            // 7. Instructor & Phone
             const instructor = getVal(colMap.instructor);
             const phone = getVal(colMap.phone);
 
             const activity: Activity = {
                 id: activityId,
                 title: title,
-                groupName: groupType !== 'רב גילאי' ? groupType : '', 
+                groupName: getVal(colMap.groupRaw) !== 'nan' ? getVal(colMap.groupRaw) : '',
                 category: appCategory,
-                description: '', 
+                description: description,
                 imageUrl: '', 
                 location: fullLocation,
                 price: price,
-                ageGroup: displayAge || 'לכל המשפחה',
+                ageGroup: ageGroupDisplay,
                 schedule: scheduleStr,
-                instructor: instructor || null,
-                phone: phone || null,
-                detailsUrl: '#',
-                minAge: minAge,
-                maxAge: maxAge,
-                ai_tags: aiTags,
-                isVisible: true, // Default visible on import
+                instructor: (instructor && instructor !== 'nan') ? instructor : null,
+                phone: (phone && phone !== 'nan') ? phone : null,
+                detailsUrl: finalLink,
+                minAge: !isNaN(minAge) ? minAge : undefined,
+                maxAge: !isNaN(maxAge) ? maxAge : undefined,
+                tags: tags,
+                ai_tags: tags,
+                isVisible: true,
                 createdAt: new Date()
             };
 
@@ -331,14 +341,13 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex items-center gap-3 mb-4 border-b border-gray-50 pb-4">
                     <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
                         <Upload className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-gray-800 text-lg">ייבוא נתונים (פורמט חדש)</h3>
+                        <h3 className="font-bold text-gray-800 text-lg">ייבוא נתונים (פורמט מעובד)</h3>
                         <p className="text-sm text-gray-500">טען את קובץ ה-CSV המלא והמעובד</p>
                     </div>
                 </div>
@@ -363,7 +372,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         {isDragActive ? 'שחרר את הקובץ כאן...' : 'גרור לכאן קובץ CSV'}
                     </p>
                     <p className="text-gray-500 text-sm mt-2 pointer-events-none">
-                        תומך בעמודות: id, activity_name, meetings_json, phone, etc.
+                        תומך בעמודות החדשות: activity_id, name, meetings_json, phone_clean
                     </p>
                     <input 
                         type="file" 

@@ -21,7 +21,7 @@ export interface Activity {
   
   schedule: string;
   instructor: string | null;
-  phone?: string | null; // New explicit phone field
+  phone?: string | null; // Explicit clean phone number from DB
   detailsUrl: string;
   
   // Visibility Control
@@ -29,8 +29,8 @@ export interface Activity {
 
   // AI & Search Metadata
   ai_summary?: string;
-  ai_tags?: string[]; // Synonyms and search tags
-  tags?: string[]; // From the new CSV 'tags' column
+  ai_tags?: string[]; // Legacy AI tags
+  tags?: string[]; // Explicit tags from the new DB 'tags' column
   
   // New structured fields for better search/filtering
   minAge?: number;

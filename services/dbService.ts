@@ -1,4 +1,3 @@
-
 import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, writeBatch, setDoc, getDoc } from 'firebase/firestore';
 import { Activity, AdminUser, UserRole } from '../types';
@@ -83,13 +82,12 @@ export const dbService = {
         chunk.forEach((activity) => {
             const { id, ...data } = activity;
             
-            // UPSERT LOGIC:
-            // If we have a specific string ID (like "act_000001"), use it as the Document ID.
+            // UPSERT LOGIC: Use ID from CSV as doc ID if available
             let docRef;
             if (id && String(id).trim().length > 0) {
                  docRef = doc(collectionRef, String(id));
             } else {
-                 docRef = doc(collectionRef); // Generate new ID if missing
+                 docRef = doc(collectionRef); 
             }
             
             const cleanData = sanitizeData({
