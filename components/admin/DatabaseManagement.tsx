@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { dbService } from '../../services/dbService';
 import { Trash2, Upload, AlertTriangle, FileText, Database, FileSpreadsheet } from 'lucide-react';
@@ -90,30 +89,37 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             return headers.findIndex(h => keywords.some(k => h === k || h.includes(k)));
         };
 
+        // Updated Map based strictly on the User's "Clean" columns request
+        // Ignored RAW columns: group_raw, notes_raw, description_raw, original_text
         const colMap = {
-            // Look for ID specifically. 'activity_id' is key.
-            id: getColumnIndex(['activity_id', 'id', 'מזהה']),
-            title: getColumnIndex(['activity_name', 'שם החוג']),
-            groupName: getColumnIndex(['group_raw', 'קבוצה']),
-            ageFrom: getColumnIndex(['age_from']),
-            ageTo: getColumnIndex(['age_to']),
-            dayHe: getColumnIndex(['day_he']),
-            daysAll: getColumnIndex(['meeting_days_all_he']),
-            startTime: getColumnIndex(['start_time']),
-            endTime: getColumnIndex(['end_time']),
-            frequency: getColumnIndex(['frequency_raw', 'frequency']),
-            price: getColumnIndex(['price_numeric', 'price_raw']),
-            instructor: getColumnIndex(['instructor_name']),
-            phone: getColumnIndex(['phone', 'instructor_phone']),
-            locationName: getColumnIndex(['center_name']),
-            address: getColumnIndex(['center_address_he']),
-            description: getColumnIndex(['description_raw']),
-            notes: getColumnIndex(['notes_raw']),
-            source: getColumnIndex(['source', 'registration_link'])
+            id: getColumnIndex(['activity_id', 'מזהה']),
+            name: getColumnIndex(['name', 'שם', 'activity_name']), // Clean Name
+            
+            // Clean Location
+            centerName: getColumnIndex(['center_name']),
+            centerAddress: getColumnIndex(['center_address_he']),
+            
+            // Clean Price
+            price: getColumnIndex(['price_numeric']),
+            
+            // Clean Age
+            ageMin: getColumnIndex(['age_min']),
+            ageMax: getColumnIndex(['age_max']),
+            ageList: getColumnIndex(['age_list']),
+            
+            // Clean Schedule
+            meetingDays: getColumnIndex(['meeting_days_all_he']),
+            meetingCount: getColumnIndex(['meetings_count']),
+            frequency: getColumnIndex(['frequency_clean']),
+            
+            // Clean Contact/Details
+            phone: getColumnIndex(['phone']),
+            descriptionAI: getColumnIndex(['description_ai_enhanced'])
         };
 
-        const activityMap = new Map<string, any>();
+        const activities: Activity[] = [];
 
+        // Iterate rows (skip header). No merging logic required as per instructions.
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (row.length < 2 && !row[0]) continue;
@@ -124,171 +130,98 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             };
 
             const rawId = getVal(colMap.id);
-            // If we found a raw ID, use it. Otherwise generate one (which causes duplicates if not careful)
-            const activityId = rawId && rawId.length > 0 ? rawId : `generated_${i}`; 
+            const activityId = rawId || `gen_${i}_${Date.now()}`; 
             
-            const title = getVal(colMap.title);
-            
-            // Skip rows without title if it's a new activity
-            if (!title && !activityMap.has(activityId)) continue; 
+            const title = getVal(colMap.name);
+            if (!title) continue; // Skip invalid rows
 
-            const existing = activityMap.get(activityId) || {
-                id: activityId,
-                title: title,
-                category: 'ספורט',
-                price: 0,
-                imageUrl: '',
-                createdAt: new Date(),
-                scheduleParts: [], 
-                rawLocations: [],
-                rawInstructors: [],
-                rawDescriptions: [],
-                rawPhones: [],
-                rawAddresses: [],
-                frequency: ''
-            };
-
-            if (title) existing.title = title;
-            
-            const groupName = getVal(colMap.groupName);
-            if (groupName) existing.groupName = groupName;
-
+            // --- Price ---
             const priceStr = getVal(colMap.price).replace(/[^\d.]/g, '');
             const priceVal = parseFloat(priceStr);
-            if (!isNaN(priceVal) && priceVal > 0) existing.price = priceVal;
+            const price = (!isNaN(priceVal) && priceVal > 0) ? priceVal : 0;
 
-            // Location
-            const locName = getVal(colMap.locationName);
-            const locAddr = getVal(colMap.address);
-            if (locName && !existing.rawLocations.includes(locName)) existing.rawLocations.push(locName);
-            if (locAddr && !existing.rawAddresses.includes(locAddr)) existing.rawAddresses.push(locAddr);
-
-            // Contact
-            const inst = getVal(colMap.instructor);
-            if (inst && !existing.rawInstructors.includes(inst)) existing.rawInstructors.push(inst);
-            const phone = getVal(colMap.phone);
-            if (phone && !existing.rawPhones.includes(phone)) existing.rawPhones.push(phone);
-            
-            // Description
-            const desc = getVal(colMap.description);
-            const notes = getVal(colMap.notes);
-            let fullDesc = desc;
-            if (notes && notes !== desc) fullDesc += `\n${notes}`;
-            if (fullDesc && !existing.rawDescriptions.includes(fullDesc)) existing.rawDescriptions.push(fullDesc);
-
-            const link = getVal(colMap.source);
-            if (link) existing.detailsUrl = link;
-
-            // Ages
-            const ageFrom = parseFloat(getVal(colMap.ageFrom));
-            const ageTo = parseFloat(getVal(colMap.ageTo));
-            if (!isNaN(ageFrom)) {
-                if (existing.minAge === undefined || ageFrom < existing.minAge) existing.minAge = ageFrom;
-            }
-            if (!isNaN(ageTo)) {
-                if (existing.maxAge === undefined || ageTo > existing.maxAge) existing.maxAge = ageTo;
-            }
-
-            // Schedule Building
-            const dayHe = getVal(colMap.dayHe);
-            const daysAll = getVal(colMap.daysAll);
-            const startT = getVal(colMap.startTime);
-            const endT = getVal(colMap.endTime);
-            const freq = getVal(colMap.frequency);
-
-            if (dayHe) {
-                let part = `יום ${dayHe}'`;
-                if (startT) {
-                    part += ` ${startT}`;
-                    if (endT) part += `-${endT}`;
-                }
-                if (!existing.scheduleParts.includes(part)) existing.scheduleParts.push(part);
-            } else if (daysAll && !existing.scheduleParts.some((s: string) => s.includes(daysAll))) {
-                 if (!startT) existing.rawSummaryDays = daysAll;
-            }
-            
-            // Prioritize explicit frequency
-            if (freq && freq.length > 1) existing.frequency = freq;
-
-            activityMap.set(activityId, existing);
-        }
-
-        // Transform map to array
-        const activities: Activity[] = Array.from(activityMap.values()).map((a: any) => {
-            const uniqueInst = [...new Set(a.rawInstructors)].filter(Boolean).join(', ');
-            const uniquePhones = [...new Set(a.rawPhones)].filter(Boolean).join(', ');
-            
-            const center = a.rawLocations[0] || 'הרצליה';
-            const addr = a.rawAddresses[0] || '';
+            // --- Location ---
+            const center = getVal(colMap.centerName);
+            const addr = getVal(colMap.centerAddress);
             let fullLocation = center;
             if (addr && !fullLocation.includes(addr)) fullLocation += `, ${addr}`;
+            if (!fullLocation) fullLocation = 'הרצליה';
 
-            let bestDesc = a.rawDescriptions.sort((a: string, b: string) => b.length - a.length)[0] || '';
-            if (uniquePhones && !bestDesc.includes(uniquePhones)) {
-                bestDesc += `\nטלפון לבירורים: ${uniquePhones}`;
+            // --- Description & Instructor ---
+            // Using the AI Enhanced description as the main description source
+            let description = getVal(colMap.descriptionAI);
+            const phone = getVal(colMap.phone);
+            
+            // Append phone if not present
+            if (phone && !description.includes(phone)) {
+                description += `\nטלפון לבירורים: ${phone}`;
             }
 
-             let ageGroup = a.groupName || '';
-             if (a.minAge !== undefined) {
-                 if (a.minAge >= 60) ageGroup = 'גיל שלישי 60+';
-                 else if (a.minAge >= 18) ageGroup = a.maxAge ? `מבוגרים (${a.minAge}-${a.maxAge})` : `מבוגרים (${a.minAge}+)`;
-                 else if (a.maxAge && a.maxAge <= 6) ageGroup = `גיל רך (${a.minAge}-${a.maxAge})`;
-                 else if (a.maxAge) ageGroup = `ילדים ונוער (${a.minAge}-${a.maxAge})`;
-                 else ageGroup = `${a.minAge}+`;
-             }
-             if (!ageGroup) ageGroup = 'רב גילאי';
-
-             let finalSchedule = '';
-             
-             if (a.frequency) {
-                 finalSchedule = a.frequency;
-             }
-
-             const uniqueSchedParts = [...new Set(a.scheduleParts)];
-             
-             if (uniqueSchedParts.length > 0) {
-                 if (finalSchedule) finalSchedule += ' | ';
-                 finalSchedule += uniqueSchedParts.join(', ');
-             } else if (a.rawSummaryDays) {
-                 if (finalSchedule) finalSchedule += ' | ';
-                 finalSchedule += `ימים: ${a.rawSummaryDays}`;
-             } else if (!finalSchedule) {
-                 finalSchedule = 'לפרטים נוספים';
-             }
-
-            // Categorization logic
-            let category = 'ספורט'; 
-            const txt = (a.title + ' ' + a.groupName + ' ' + (a.rawLocations[0] || '')).toLowerCase();
+            // --- Ages ---
+            const minAge = parseFloat(getVal(colMap.ageMin));
+            const maxAge = parseFloat(getVal(colMap.ageMax));
             
-            if (txt.includes('יצירה') || txt.includes('אומנות') || txt.includes('ציור') || txt.includes('קרמיקה') || txt.includes('פיסול') || txt.includes('תכשיט') || txt.includes('נגרות') || txt.includes('גילוף')) category = 'אומנות';
-            else if (txt.includes('מוזיקה') || txt.includes('גיטרה') || txt.includes('פסנתר') || txt.includes('תווים') || txt.includes('שירה') || txt.includes('זמר')) category = 'מוזיקה';
-            else if (txt.includes('מחשבים') || txt.includes('טכנולוגיה') || txt.includes('סייבר') || txt.includes('רובוטיקה') || txt.includes('הייטק') || txt.includes('גיימינג') || txt.includes('מייקר')) category = 'טכנולוגיה';
+            let ageGroup = '';
+            if (!isNaN(minAge)) {
+                if (minAge >= 60) ageGroup = 'גיל שלישי 60+';
+                else if (minAge >= 18) ageGroup = !isNaN(maxAge) ? `מבוגרים (${minAge}-${maxAge})` : `מבוגרים (${minAge}+)`;
+                else if (!isNaN(maxAge) && maxAge <= 6) ageGroup = `גיל רך (${minAge}-${maxAge})`;
+                else if (!isNaN(maxAge)) ageGroup = `ילדים ונוער (${minAge}-${maxAge})`;
+                else ageGroup = `${minAge}+`;
+            } else {
+                ageGroup = 'רב גילאי';
+            }
+
+            // --- Schedule ---
+            // Using meeting_days_all_he + frequency_clean
+            const days = getVal(colMap.meetingDays);
+            const freq = getVal(colMap.frequency);
+            
+            let schedule = '';
+            if (freq) schedule += freq;
+            if (days) {
+                if (schedule) schedule += ' | ';
+                schedule += days;
+            }
+            if (!schedule) schedule = 'לפרטים נוספים';
+
+            // --- Category Inference (Basic) ---
+            let category = 'ספורט'; 
+            const txt = (title + ' ' + description + ' ' + center).toLowerCase();
+            
+            if (txt.includes('יצירה') || txt.includes('אומנות') || txt.includes('ציור') || txt.includes('קרמיקה') || txt.includes('פיסול') || txt.includes('תכשיט')) category = 'אומנות';
+            else if (txt.includes('מוזיקה') || txt.includes('גיטרה') || txt.includes('פסנתר') || txt.includes('שירה') || txt.includes('זמר')) category = 'מוזיקה';
+            else if (txt.includes('מחשבים') || txt.includes('טכנולוגיה') || txt.includes('סייבר') || txt.includes('רובוטיקה') || txt.includes('הייטק') || txt.includes('גיימינג')) category = 'טכנולוגיה';
             else if (txt.includes('גמלאים') || txt.includes('גיל הזהב') || txt.includes('מועדון') || txt.includes('הרצאה') || txt.includes('ברידג')) category = 'קהילה';
-            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה') || txt.includes('מדע') || txt.includes('וטרינריה') || txt.includes('שחמט') || txt.includes('מבוכים')) category = 'העשרה ולימוד';
-            else if (txt.includes('ריקוד') || txt.includes('מחול') || txt.includes('בלט') || txt.includes('זומבה') || txt.includes('היפ') || txt.includes('תנועה')) category = 'ריקוד ומחול';
-            else if (txt.includes('בישול') || txt.includes('אפייה') || txt.includes('קונדיטוריה')) category = 'בישול';
+            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה') || txt.includes('מדע')) category = 'העשרה ולימוד';
+            else if (txt.includes('ריקוד') || txt.includes('מחול') || txt.includes('בלט') || txt.includes('זומבה') || txt.includes('היפ')) category = 'ריקוד ומחול';
+            else if (txt.includes('בישול') || txt.includes('אפייה')) category = 'בישול';
             else if (txt.includes('צהרון') || txt.includes('קייטנ') || txt.includes('מעון')) category = 'צהרון';
             
-            if (a.minAge >= 60) category = 'גיל הזהב';
+            if (!isNaN(minAge) && minAge >= 60) category = 'גיל הזהב';
 
-            return {
-                id: a.id,
-                title: a.title,
-                groupName: a.groupName,
+            const activity: Activity = {
+                id: activityId,
+                title: title,
+                // We use the title as group name if no specific group logic is provided, 
+                // or we could leave it empty. For now, mapping title to it if needed or leaving undefined.
+                groupName: '', 
                 category: category,
-                description: bestDesc,
-                imageUrl: a.imageUrl || '',
+                description: description,
+                imageUrl: '', // No image column in provided list
                 location: fullLocation,
-                price: a.price,
+                price: price,
                 ageGroup: ageGroup,
-                schedule: finalSchedule,
-                instructor: uniqueInst || null,
-                detailsUrl: a.detailsUrl || '#',
-                minAge: a.minAge !== undefined ? a.minAge : undefined,
-                maxAge: a.maxAge !== undefined ? a.maxAge : undefined,
-                createdAt: a.createdAt
+                schedule: schedule,
+                instructor: null, // User explicitly didn't list instructor column in Clean list
+                detailsUrl: '#',
+                minAge: !isNaN(minAge) ? minAge : undefined,
+                maxAge: !isNaN(maxAge) ? maxAge : undefined,
+                createdAt: new Date()
             };
-        });
+
+            activities.push(activity);
+        }
 
         return activities;
     };
@@ -321,7 +254,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                     return;
                 }
 
-                const confirmMsg = `נמצאו ${dataToImport.length} חוגים (ייחודיים) בקובץ.\n\nהאם לייבא אותם למערכת?`;
+                const confirmMsg = `נמצאו ${dataToImport.length} חוגים (ללא מיזוג כפילויות) בקובץ.\n\nהאם לייבא אותם למערכת?`;
 
                 if (window.confirm(confirmMsg)) {
                     setIsUploading(true);
@@ -345,6 +278,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         if (file) processFile(file);
     };
 
+    // --- Drag and Drop Handlers ---
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -400,7 +334,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         {isDragActive ? 'שחרר את הקובץ כאן...' : 'גרור לכאן קובץ או לחץ לבחירה'}
                     </p>
                     <p className="text-gray-500 text-sm mt-2 pointer-events-none">
-                        תומך בפורמט CSV (אקסל) ו-JSON. רשומות קיימות יעודכנו.
+                        תומך בפורמט CSV מעובד (עמודות נקיות בלבד).
                     </p>
                     <input 
                         type="file" 
