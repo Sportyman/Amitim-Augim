@@ -159,9 +159,9 @@ const PublicHome: React.FC = () => {
       const instructor = (activity.instructor || '').toLowerCase();
 
       // Category Filter Logic - Fuzzy Matching
-      const selectedCategoryNames = selectedCategories.map(id => 
-          categories.find(c => c.id === id)?.name.toLowerCase()
-      ).filter(Boolean);
+      const selectedCategoryNames = selectedCategories
+        .map(id => categories.find(c => c.id === id)?.name.toLowerCase())
+        .filter((n): n is string => typeof n === 'string');
 
       const categoryMatch =
         selectedCategories.length === 0 ||
