@@ -44,6 +44,10 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         let currentField = '';
         let inQuotes = false;
         
+        // Naive detection of separator based on first line
+        const firstLine = text.split('\n')[0];
+        const separator = firstLine.includes('\t') ? '\t' : ',';
+
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
             const nextChar = text[i + 1];
@@ -57,7 +61,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                     // Toggle quote state
                     inQuotes = !inQuotes;
                 }
-            } else if (char === ',' && !inQuotes) {
+            } else if (char === separator && !inQuotes) {
                 // Field separator
                 currentRow.push(currentField);
                 currentField = '';
@@ -95,39 +99,36 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             return headers.findIndex(h => keywords.some(k => h === k || h.includes(k)));
         };
 
-        // Map based on user's NEW file structure
+        // Map based on the NEW detailed CSV structure provided by user
         const colMap = {
-            id: getColumnIndex(['activity_id', 'id']),
-            title: getColumnIndex(['activity_name', 'title']),
-            groupName: getColumnIndex(['group_raw', 'קבוצה']),
+            id: getColumnIndex(['activity_id']),
+            title: getColumnIndex(['activity_name']),
+            groupName: getColumnIndex(['group_raw']),
             
-            // Description & Notes
-            description: getColumnIndex(['description_raw', 'תיאור']),
-            notes: getColumnIndex(['notes_raw']),
-            
-            // Location
-            locationName: getColumnIndex(['center_name', 'מיקום', 'מרכז']),
-            address: getColumnIndex(['center_address_he', 'center_address', 'כתובת']),
-            
-            // Price
-            price: getColumnIndex(['price_numeric', 'price', 'מחיר']),
-            
-            // Age fields
+            // Age
             ageFrom: getColumnIndex(['age_from']),
             ageTo: getColumnIndex(['age_to']),
-            ageList: getColumnIndex(['age_list']),
             
-            // Schedule fields
-            dayHe: getColumnIndex(['day_he']), // Specific day for this row
-            daysAll: getColumnIndex(['meeting_days_all_he']), // Summary of days
+            // Schedule
+            dayHe: getColumnIndex(['day_he']),
+            daysAll: getColumnIndex(['meeting_days_all_he']),
             startTime: getColumnIndex(['start_time']),
             endTime: getColumnIndex(['end_time']),
             frequency: getColumnIndex(['frequency_raw']),
             
-            // Contact / Link
-            instructor: getColumnIndex(['instructor_name', 'מדריך']),
-            phone: getColumnIndex(['phone', 'instructor_phone', 'טלפון']),
-            source: getColumnIndex(['source', 'registration_link', 'קישור'])
+            // Pricing
+            price: getColumnIndex(['price_numeric', 'price_raw']),
+            
+            // Contact & Location
+            instructor: getColumnIndex(['instructor_name']),
+            phone: getColumnIndex(['phone']),
+            locationName: getColumnIndex(['center_name']),
+            address: getColumnIndex(['center_address_he']),
+            
+            // Details
+            description: getColumnIndex(['description_raw']),
+            notes: getColumnIndex(['notes_raw']),
+            source: getColumnIndex(['source', 'registration_link'])
         };
 
         // Temporary Map to merge rows with same ID
@@ -147,9 +148,10 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const activityId = rawId || `generated_${i}`; 
             
             const title = getVal(colMap.title);
+            // If new activity but no title, skip. If existing activity in map, we might just be adding schedule info.
             if (!title && !activityMap.has(activityId)) continue; 
 
-            // Existing object or new one
+            // Get existing object or create new one
             const existing = activityMap.get(activityId) || {
                 id: activityId,
                 title: title,
@@ -157,12 +159,13 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 price: 0,
                 imageUrl: '',
                 createdAt: new Date(),
-                // Accumulators
+                // Accumulators for merging
                 scheduleParts: [], 
                 rawLocations: [],
                 rawInstructors: [],
                 rawDescriptions: [],
-                rawPhones: []
+                rawPhones: [],
+                rawAddresses: []
             };
 
             // --- Merge Logic: Prefer non-empty new values ---
@@ -177,9 +180,9 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             // Location Construction
             const locName = getVal(colMap.locationName);
             const locAddr = getVal(colMap.address);
-            let fullLoc = locName;
-            if (locAddr && !fullLoc.includes(locAddr)) fullLoc += `, ${locAddr}`;
-            if (fullLoc) existing.location = fullLoc; // Last non-empty location wins
+            
+            if (locName && !existing.rawLocations.includes(locName)) existing.rawLocations.push(locName);
+            if (locAddr && !existing.rawAddresses.includes(locAddr)) existing.rawAddresses.push(locAddr);
 
             // Instructor
             const inst = getVal(colMap.instructor);
@@ -194,7 +197,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const notes = getVal(colMap.notes);
             let fullDesc = desc;
             if (notes && notes !== desc) fullDesc += `\n${notes}`;
-            if (fullDesc) existing.rawDescriptions.push(fullDesc);
+            if (fullDesc && !existing.rawDescriptions.includes(fullDesc)) existing.rawDescriptions.push(fullDesc);
 
             // Link
             const link = getVal(colMap.source);
@@ -203,7 +206,8 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             // Age Logic
             const ageFrom = parseFloat(getVal(colMap.ageFrom));
             const ageTo = parseFloat(getVal(colMap.ageTo));
-            // Update min/max if this row has stricter bounds or simply valid bounds
+            
+            // Update min/max if valid numbers found
             if (!isNaN(ageFrom)) {
                 if (existing.minAge === undefined || ageFrom < existing.minAge) existing.minAge = ageFrom;
             }
@@ -218,66 +222,82 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
             const endT = getVal(colMap.endTime);
             const freq = getVal(colMap.frequency);
 
-            let rowSchedule = '';
-            
-            // Strategy: Use specific day + time if available, otherwise generic days
-            const effectiveDay = dayHe || daysAll;
-            if (effectiveDay) rowSchedule += effectiveDay;
-            
-            if (startT) {
-                rowSchedule += (rowSchedule ? ' ' : '') + startT;
-                if (endT) rowSchedule += `-${endT}`;
-            } else if (freq && !rowSchedule.includes(freq)) {
-                rowSchedule += ` (${freq})`;
+            // If we have a specific day and time for this row
+            if (dayHe && startT) {
+                let timeStr = startT;
+                if (endT) timeStr += `-${endT}`;
+                existing.scheduleParts.push(`יום ${dayHe}' ${timeStr}`);
+            } 
+            // If we have summary days but no specific time on this row (or just general row)
+            else if (daysAll && !existing.scheduleParts.some((s: string) => s.includes(daysAll))) {
+                // Only add if not covered by specific rows or if its a summary line
+                // Ideally we want the specific times. Let's store it, but specific rows take precedence in final cleanup.
             }
 
-            if (rowSchedule) existing.scheduleParts.push(rowSchedule);
+            // Store raw summary just in case
+            if (daysAll && !existing.rawSummaryDays) existing.rawSummaryDays = daysAll;
 
             activityMap.set(activityId, existing);
         }
 
-        // Final pass to clean up merged objects
+        // Final pass to clean up merged objects and create the Activity interface
         const activities: Activity[] = Array.from(activityMap.values()).map((a: any) => {
-            // Unique instructors
+            // 1. Instructor
             const uniqueInst = [...new Set(a.rawInstructors)].filter(Boolean).join(', ');
             
-            // Unique phones
+            // 2. Phone
             const uniquePhones = [...new Set(a.rawPhones)].filter(Boolean).join(', ');
             
-            // Unique schedule parts
-            const uniqueSched = [...new Set(a.scheduleParts)].filter(Boolean).join(' | ');
-            
-            // Longest description
+            // 3. Location
+            const center = a.rawLocations[0] || 'הרצליה';
+            const addr = a.rawAddresses[0] || '';
+            let fullLocation = center;
+            if (addr && !fullLocation.includes(addr)) fullLocation += `, ${addr}`;
+
+            // 4. Description
+            // Take the longest unique description found
             let bestDesc = a.rawDescriptions.sort((a: string, b: string) => b.length - a.length)[0] || '';
-            
-            // Append phone if missing
             if (uniquePhones && !bestDesc.includes(uniquePhones)) {
-                bestDesc += `\nטלפון: ${uniquePhones}`;
+                bestDesc += `\nטלפון לבירורים: ${uniquePhones}`;
             }
 
-             // Age Group Construction
-             let ageGroup = a.groupName || 'רב גילאי';
+             // 5. Age Group String Construction
+             let ageGroup = a.groupName || '';
              if (a.minAge !== undefined) {
                  if (a.minAge >= 60) ageGroup = 'גיל שלישי 60+';
-                 else if (a.minAge >= 18) ageGroup = `מבוגרים (${a.minAge}+)`;
+                 else if (a.minAge >= 18) ageGroup = a.maxAge ? `מבוגרים (${a.minAge}-${a.maxAge})` : `מבוגרים (${a.minAge}+)`;
                  else if (a.maxAge && a.maxAge <= 6) ageGroup = `גיל רך (${a.minAge}-${a.maxAge})`;
                  else if (a.maxAge) ageGroup = `ילדים ונוער (${a.minAge}-${a.maxAge})`;
                  else ageGroup = `${a.minAge}+`;
              }
+             if (!ageGroup) ageGroup = 'רב גילאי';
 
-            // Determine Category based on keywords
+             // 6. Schedule Construction
+             // If we collected specific "Day + Time" parts, use them.
+             let finalSchedule = '';
+             const uniqueSchedParts = [...new Set(a.scheduleParts)];
+             
+             if (uniqueSchedParts.length > 0) {
+                 finalSchedule = uniqueSchedParts.join(' | ');
+             } else if (a.rawSummaryDays) {
+                 // Fallback to just days if no times found
+                 finalSchedule = `ימים: ${a.rawSummaryDays}`;
+             } else {
+                 finalSchedule = 'לפרטים נוספים';
+             }
+
+            // 7. Category Inference
             let category = 'ספורט'; // Default
             const txt = (a.title + ' ' + a.groupName).toLowerCase();
             if (txt.includes('יצירה') || txt.includes('אומנות') || txt.includes('ציור') || txt.includes('קרמיקה') || txt.includes('פיסול') || txt.includes('תכשיט')) category = 'אומנות';
             else if (txt.includes('מוזיקה') || txt.includes('גיטרה') || txt.includes('פסנתר') || txt.includes('תווים') || txt.includes('שירה') || txt.includes('זמר')) category = 'מוזיקה';
             else if (txt.includes('מחשבים') || txt.includes('טכנולוגיה') || txt.includes('סייבר') || txt.includes('רובוטיקה') || txt.includes('הייטק')) category = 'טכנולוגיה';
-            else if (txt.includes('גמלאים') || txt.includes('גיל הזהב') || txt.includes('מועדון') || txt.includes('הרצאה')) category = 'קהילה';
-            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה') || txt.includes('מדע')) category = 'העשרה ולימוד';
+            else if (txt.includes('גמלאים') || txt.includes('גיל הזהב') || txt.includes('מועדון') || txt.includes('הרצאה') || txt.includes('ברידג')) category = 'קהילה';
+            else if (txt.includes('אנגלית') || txt.includes('שפות') || txt.includes('לימוד') || txt.includes('העשרה') || txt.includes('מדע') || txt.includes('וטרינריה')) category = 'העשרה ולימוד';
             else if (txt.includes('ריקוד') || txt.includes('מחול') || txt.includes('בלט') || txt.includes('זומבה') || txt.includes('היפ')) category = 'ריקוד ומחול';
             else if (txt.includes('בישול') || txt.includes('אפייה') || txt.includes('קונדיטוריה')) category = 'בישול';
-            else if (txt.includes('צהרון') || txt.includes('קייטנ')) category = 'צהרון';
+            else if (txt.includes('צהרון') || txt.includes('קייטנ') || txt.includes('מעון')) category = 'צהרון';
             
-            // Construct Activity Object
             return {
                 id: a.id,
                 title: a.title,
@@ -285,10 +305,10 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                 category: category,
                 description: bestDesc,
                 imageUrl: a.imageUrl || '',
-                location: a.location || 'הרצליה',
+                location: fullLocation,
                 price: a.price,
                 ageGroup: ageGroup,
-                schedule: uniqueSched || 'לפרטים נוספים',
+                schedule: finalSchedule,
                 instructor: uniqueInst || null,
                 detailsUrl: a.detailsUrl || '#',
                 // Use undefined if NaN so the sanitizer removes it
