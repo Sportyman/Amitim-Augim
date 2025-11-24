@@ -62,6 +62,32 @@ export const findRelatedKeywords = async (term: string): Promise<string[]> => {
   }
 };
 
+export const generateMarketingDescription = async (title: string, location: string, ageGroup: string): Promise<string> => {
+    if (!ai) return '';
+
+    const prompt = `
+    Write a short, attractive marketing description (2 lines max) in Hebrew for a class.
+    
+    Details:
+    - Name: ${title}
+    - Location: ${location}
+    - Target Audience: ${ageGroup}
+
+    The description should be inviting and mention the benefits. Do not use Markdown. Just plain text.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+        return response.text?.trim() || '';
+    } catch (error) {
+        console.error("Error generating description", error);
+        return '';
+    }
+};
+
 export const scrapeAndStructureData = async (html: string): Promise<string> => {
   if (!html.trim()) {
     throw new Error("HTML input is empty.");

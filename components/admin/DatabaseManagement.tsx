@@ -18,6 +18,7 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
     // Sync State
     const [isUploading, setIsUploading] = useState(false);
     const [archiveMissing, setArchiveMissing] = useState(true);
+    const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // History State
@@ -412,6 +413,27 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
         if (file) processFile(file);
     };
 
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file && (file.name.endsWith('.csv') || file.name.endsWith('.txt'))) {
+            processFile(file);
+        } else if (file) {
+            alert('נא להעלות קובץ CSV בלבד.');
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             
@@ -436,11 +458,20 @@ const DatabaseManagement: React.FC<DatabaseManagementProps> = ({ onRefresh }) =>
                         <p className="text-sm text-gray-500 mb-6">ייבוא קובץ חדש יעדכן רשומות קיימות ויוסיף חדשות. תמונות והגדרות נראות ישמרו.</p>
 
                         <div 
-                            className={`flex flex-col items-center justify-center p-10 border-2 border-dashed border-blue-100 bg-gray-50 hover:bg-blue-50/30 rounded-xl transition-all cursor-pointer mb-4`}
+                            className={`flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-xl transition-all cursor-pointer mb-4 ${
+                                isDragging 
+                                    ? 'border-blue-500 bg-blue-50 scale-[1.02]' 
+                                    : 'border-blue-100 bg-gray-50 hover:bg-blue-50/30'
+                            }`}
                             onClick={() => fileInputRef.current?.click()}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
                         >
-                            <Upload className="w-10 h-10 text-blue-400 mb-3" />
-                            <p className="text-gray-900 font-bold">לחץ להעלאת קובץ CSV</p>
+                            <Upload className={`w-10 h-10 mb-3 transition-colors ${isDragging ? 'text-blue-600' : 'text-blue-400'}`} />
+                            <p className={`font-bold transition-colors ${isDragging ? 'text-blue-800' : 'text-gray-900'}`}>
+                                {isDragging ? 'שחרר את הקובץ כאן' : 'לחץ או גרור קובץ CSV לכאן'}
+                            </p>
                             <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.txt" onChange={handleFileUpload} />
                         </div>
 

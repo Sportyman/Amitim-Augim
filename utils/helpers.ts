@@ -30,6 +30,26 @@ export const parseAgeGroupToRange = (ageGroup: string): [number, number] | null 
   return null;
 };
 
+export const calculateDetailedAge = (ageGroupInput: string) => {
+    const range = parseAgeGroupToRange(ageGroupInput);
+    if (!range) return { minAge: 0, maxAge: 120, age_list: '' };
+
+    const [min, max] = range;
+    const list = [];
+    // Generate age list up to a reasonable limit to avoid massive strings
+    const effectiveMax = Math.min(max, min + 20); 
+    
+    for (let i = min; i <= effectiveMax; i++) {
+        list.push(i);
+    }
+
+    return {
+        minAge: min,
+        maxAge: max,
+        age_list: list.join(',')
+    };
+};
+
 export const formatSchedule = (schedule: string): string => {
   if (!schedule) return '';
 

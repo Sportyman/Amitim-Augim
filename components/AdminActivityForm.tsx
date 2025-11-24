@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Activity } from '../types';
-import { CATEGORIES } from '../constants';
+import { Activity, Category } from '../types';
 import ActivityCard from './ActivityCard';
-import { Images, Check, X, AlertCircle } from 'lucide-react';
+import { Images, Check, X, AlertCircle, Sparkles, Plus, MapPin, List } from 'lucide-react';
 import { dbService } from '../services/dbService';
+import { generateMarketingDescription } from '../services/geminiService';
+import { calculateDetailedAge } from '../utils/helpers';
 
 interface AdminActivityFormProps {
   initialData?: Activity | null;
@@ -159,14 +161,28 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
     ai_tags: []
   });
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [existingLocations, setExistingLocations] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
 
   useEffect(() => {
+    const loadData = async () => {
+        // Extract unique locations from all activities
+        const locs = [...new Set(allActivities.map(a => a.location.split(',')[0].trim()))].sort();
+        setExistingLocations(locs);
+
+        // Fetch categories for the dropdown
+        const cats = await dbService.getCategories();
+        setAvailableCategories(cats);
+    };
+    loadData();
+
     if (initialData) {
       const { id, ...rest } = initialData;
       setFormData(rest);
     }
-  }, [initialData]);
+  }, [initialData, allActivities]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -176,11 +192,52 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
     }));
   };
 
+  const handleGenerateDescription = async () => {
+      if (!formData.title || !formData.ageGroup) {
+          alert('נא למלא שם חוג וקהל יעד לפני יצירת תיאור');
+          return;
+      }
+      setAiLoading(true);
+      try {
+          const desc = await generateMarketingDescription(formData.title, formData.location, formData.ageGroup);
+          if (desc) {
+              setFormData(prev => ({ ...prev, description: desc }));
+          }
+      } catch (e) {
+          alert('שגיאה ביצירת תיאור');
+      } finally {
+          setAiLoading(false);
+      }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
-      await onSubmit(formData);
+        // 1. Auto-calculate DB fields
+        const ageData = calculateDetailedAge(formData.ageGroup);
+        
+        // 2. Handle New Category (Ad-hoc creation)
+        // Check if the typed category exists in the list
+        const categoryExists = availableCategories.some(c => c.name === formData.category);
+        if (!categoryExists && formData.category.trim().length > 2) {
+            const newCat = {
+                id: `cat_${Date.now()}`,
+                name: formData.category,
+                iconId: 'sport', // Default icon
+                isVisible: true,
+                order: 99
+            };
+            await dbService.saveCategory(newCat);
+        }
+
+        const finalData = {
+            ...formData,
+            ...ageData
+        };
+
+        await onSubmit(finalData);
     } catch (error) {
       alert('שגיאה בשמירת הנתונים');
     } finally {
@@ -223,9 +280,7 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
                 {initialData ? 'עריכת פרטי חוג' : 'הוספת חוג חדש למערכת'}
             </h2>
             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="h-6 w-6" />
             </button>
         </div>
         
@@ -235,18 +290,31 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
             <div className="flex-1 overflow-y-auto p-8 border-l border-gray-100">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* Title */}
                         <div className="col-span-1 md:col-span-2">
                             <label className="block text-sm font-bold text-gray-700 mb-1">שם הפעילות</label>
                             <input required type="text" name="title" value={formData.title} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none transition-all" placeholder="לדוגמה: ג'ודו לילדים" />
                         </div>
                         
+                        {/* Category - Datalist for New Entries */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">קטגוריה</label>
-                            <select name="category" value={formData.category} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none bg-white">
-                                {CATEGORIES.map(c => (
-                                    <option key={c.id} value={c.name}>{c.name}</option>
+                            <label className="block text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
+                                <List className="w-4 h-4 text-sky-500"/> קטגוריה
+                            </label>
+                            <input 
+                                list="categories-list" 
+                                name="category" 
+                                value={formData.category} 
+                                onChange={handleChange} 
+                                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none"
+                                placeholder="בחר או הקלד חדשה..."
+                            />
+                            <datalist id="categories-list">
+                                {availableCategories.map(c => (
+                                    <option key={c.id} value={c.name} />
                                 ))}
-                            </select>
+                            </datalist>
                         </div>
                         
                         <div>
@@ -254,14 +322,41 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
                             <input type="number" name="price" value={formData.price} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" />
                         </div>
                         
+                        {/* Age Group - Calculates DB fields on save */}
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">קהל יעד (גיל)</label>
-                            <input required type="text" name="ageGroup" value={formData.ageGroup} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" placeholder="לדוגמה: גילאי 6-9"/>
+                            <input 
+                                required 
+                                type="text" 
+                                name="ageGroup" 
+                                value={formData.ageGroup} 
+                                onChange={handleChange} 
+                                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" 
+                                placeholder="למשל: 18-23, גילאי 6-9..."
+                            />
+                            <p className="text-xs text-gray-400 mt-1">המערכת תחשב אוטומטית את הנתונים למסד הנתונים.</p>
                         </div>
                         
+                        {/* Location - Datalist */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">מיקום</label>
-                            <input required type="text" name="location" value={formData.location} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" placeholder="מרכז קהילתי..." />
+                            <label className="block text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-sky-500"/> מיקום
+                            </label>
+                            <input 
+                                required 
+                                list="locations-list"
+                                type="text" 
+                                name="location" 
+                                value={formData.location} 
+                                onChange={handleChange} 
+                                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" 
+                                placeholder="בחר מרכז או הקלד..." 
+                            />
+                            <datalist id="locations-list">
+                                {existingLocations.map((loc, i) => (
+                                    <option key={i} value={loc} />
+                                ))}
+                            </datalist>
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
@@ -285,11 +380,21 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
                                     </button>
                                 )}
                             </div>
-                            <p className="text-xs text-gray-400 mt-1">מומלץ להשתמש בקישור ישיר לתמונה איכותית.</p>
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
-                            <label className="block text-sm font-bold text-gray-700 mb-1">תיאור מלא</label>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-sm font-bold text-gray-700">תיאור מלא</label>
+                                <button 
+                                    type="button"
+                                    onClick={handleGenerateDescription}
+                                    disabled={aiLoading}
+                                    className="text-xs font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1 disabled:opacity-50"
+                                >
+                                    <Sparkles className="w-3 h-3" />
+                                    {aiLoading ? 'מייצר...' : 'נסח תיאור אוטומטי (AI)'}
+                                </button>
+                            </div>
                             <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none resize-none" placeholder="תיאור מפורט של החוג..." />
                         </div>
                         
@@ -316,7 +421,7 @@ const AdminActivityForm: React.FC<AdminActivityFormProps> = ({ initialData, allA
                     <div className="mt-6 text-center p-4 bg-blue-50 rounded-xl border border-blue-100">
                         <p className="text-sm text-blue-800">
                             כך יראה הכרטיס באפליקציה. <br/>
-                            וודא שהתמונה והטקסטים נראים תקינים.
+                            המידע מעודכן בזמן אמת כפי שמוזן בטופס.
                         </p>
                     </div>
                 </div>
