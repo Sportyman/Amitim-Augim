@@ -35,7 +35,7 @@ const logAction = async (
     try {
         const userEmail = auth.currentUser?.email || 'unknown';
         // Don't log heavy bulk operations individually to save writes, 
-        // handled by bulk wrapper usually, but essential for single edits.
+        // handled by bulk wrapper usually, but essential for single edits.  
         
         await addDoc(collection(db, AUDIT_COLLECTION), {
             action,
